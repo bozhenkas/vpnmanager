@@ -1,0 +1,13 @@
+# секреты
+*.env
+.env
+bot.db
+subscriptions/
+whitelist_links.txt
+
+# python
+__pycache__/
+*.pyc
+
+# os
+.DS_Store
