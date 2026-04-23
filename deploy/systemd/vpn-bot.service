@@ -1,0 +1,16 @@
+[Unit]
+Description=VPN Management Telegram Bot
+After=network.target x-ui.service nginx.service
+Wants=x-ui.service
+
+[Service]
+Type=simple
+WorkingDirectory=/root/vpn-bot
+ExecStart=/usr/bin/python3 /root/vpn-bot/vpn-bot.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

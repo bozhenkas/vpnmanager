@@ -1,13 +1,23 @@
-# секреты
-*.env
+# секреты и runtime
 .env
 bot.db
+*.db
+*.db-journal
 subscriptions/
-whitelist_links.txt
+
+# бэкапы сервера
+*.bak
+*.bak.*
+*.broken*
+*.broken2
+
+# memory palace — не для публичного репо
+.claude/
 
 # python
 __pycache__/
 *.pyc
+*.pyo
 
 # os
 .DS_Store

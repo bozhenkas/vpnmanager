@@ -1,0 +1,30 @@
+services:
+  bot:
+    image: python:3.12-slim
+    restart: unless-stopped
+    working_dir: /app
+    command: python vpn-bot.py
+    env_file: .env
+    volumes:
+      - ./src/bot/vpn-bot.py:/app/vpn-bot.py:ro
+      - bot_db:/app/data
+      - /etc/x-ui/x-ui.db:/etc/x-ui/x-ui.db:ro   # 3X-UI база только для чтения
+    network_mode: host   # нужен доступ к localhost:25565 (3X-UI panel)
+    depends_on:
+      - sub-updater
+
+  sub-updater:
+    image: python:3.12-slim
+    restart: unless-stopped
+    working_dir: /app
+    command: >
+      sh -c "pip install requests urllib3 --quiet && python updater.py"
+    env_file: .env
+    volumes:
+      - ./src/sub-updater/updater.py:/app/updater.py:ro
+      - ./src/sub-updater/whitelist_links.txt:/app/whitelist_links.txt:ro
+      - /etc/x-ui/x-ui.db:/etc/x-ui/x-ui.db   # rw — updater пишет в базу
+    network_mode: host
+
+volumes:
+  bot_db:

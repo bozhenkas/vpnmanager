@@ -1,0 +1,25 @@
+[Unit]
+Description=nfqws2 anti-DPI service
+After=network.target
+
+[Service]
+Type=forking
+ExecStartPre=/bin/sh -c 'iptables -t mangle -D POSTROUTING -o $(ip route get 8.8.8.8 | grep -oP "dev \K\S+") -p tcp -m multiport --dports 80,443 -m connbytes --connbytes-dir=original --connbytes-mode=packets --connbytes 1:6 -m mark ! --mark 0x40000000/0x40000000 -j NFQUEUE --queue-num 200 --queue-bypass 2>/dev/null; true'
+ExecStart=/usr/local/bin/nfqws2 \
+    --daemon \
+    --qnum=200 \
+    --user=nobody \
+    --lua-init=@/opt/zapret2/lua/zapret-lib.lua \
+    --lua-init=@/opt/zapret2/lua/zapret-antidpi.lua \
+    --new \
+    --filter-tcp=443 \
+    --filter-l7=tls \
+    --hostlist=/opt/zapret/ipset/zapret-hosts.txt \
+    --lua-desync=fakedsplit:pos=2:ip_ttl=5:tcp_md5
+ExecStartPost=/bin/sh -c 'iptables -t mangle -I POSTROUTING -o $(ip route get 8.8.8.8 | grep -oP "dev \K\S+") -p tcp -m multiport --dports 80,443 -m connbytes --connbytes-dir=original --connbytes-mode=packets --connbytes 1:6 -m mark ! --mark 0x40000000/0x40000000 -j NFQUEUE --queue-num 200 --queue-bypass'
+ExecStop=/bin/sh -c 'iptables -t mangle -D POSTROUTING -o $(ip route get 8.8.8.8 | grep -oP "dev \K\S+") -p tcp -m multiport --dports 80,443 -m connbytes --connbytes-dir=original --connbytes-mode=packets --connbytes 1:6 -m mark ! --mark 0x40000000/0x40000000 -j NFQUEUE --queue-num 200 --queue-bypass 2>/dev/null; true'
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
