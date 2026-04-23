@@ -1467,7 +1467,7 @@ def update_github_vpn_block(domain: str, add: bool):
         # Клонируем если нет
         if not __import__('os').path.exists(repo_dir):
             subprocess.run(['git', 'clone',
-                'https://REMOVED_TOKEN@github.com/bozhenkas/russia-vpn-block-domains.git',
+                os.environ.get("DOMAINS_REPO_URL", "https://github.com/bozhenkas/russia-vpn-block-domains.git"),
                 repo_dir], capture_output=True)
 
         with open(domains_file) as f:
