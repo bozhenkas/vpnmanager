@@ -16,7 +16,31 @@ import sys
 import time
 import urllib.error
 import urllib.request
+import urllib.request
 from pathlib import Path
+
+
+# форсируем IPv4 — на некоторых серверах IPv6 недоступен, urllib пробует его первым
+_orig_create_connection = socket.create_connection
+
+
+def _ipv4_create_connection(address, timeout=socket._GLOBAL_DEFAULT_TIMEOUT, source_address=None):
+    host, port = address
+    for af, *_, sa in socket.getaddrinfo(host, port, socket.AF_INET, socket.SOCK_STREAM):
+        sock = socket.socket(af, socket.SOCK_STREAM)
+        if timeout is not socket._GLOBAL_DEFAULT_TIMEOUT:
+            sock.settimeout(timeout)
+        if source_address:
+            sock.bind(source_address)
+        try:
+            sock.connect(sa)
+            return sock
+        except OSError:
+            sock.close()
+    raise OSError(f"cannot connect to {host}:{port} over IPv4")
+
+
+socket.create_connection = _ipv4_create_connection
 
 # ---------------------------------------------------------------------------
 # конфиг из env
@@ -28,8 +52,8 @@ DOMAIN          = os.environ.get("DOMAIN", "ru.goida.fun")
 CHECK_PORT      = int(os.environ.get("CHECK_PORT", "443"))
 CF_TOKEN        = os.environ["CF_TOKEN"]
 CF_ZONE_ID      = os.environ["CF_ZONE_ID"]
-TG_TOKEN        = os.environ.get("TG_TOKEN", "")
-TG_CHAT_ID      = os.environ.get("TG_CHAT_ID", "")
+NOTIFY_URL      = os.environ.get("NOTIFY_URL", "")   # https://ru.goida.fun/notify
+NOTIFY_TOKEN    = os.environ.get("NOTIFY_TOKEN", "")
 STATE_FILE      = Path(os.environ.get("STATE_FILE", "/tmp/ip-watchdog.state"))
 FAIL_THRESHOLD  = int(os.environ.get("FAIL_THRESHOLD", "3"))
 PROBE_TIMEOUT   = int(os.environ.get("PROBE_TIMEOUT", "8"))
@@ -135,19 +159,28 @@ def dns_switch(new_ip: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Telegram
+# alert via /notify relay on RU server (обходит блокировку TG на ISP)
 # ---------------------------------------------------------------------------
 
 def tg_alert(text: str) -> None:
-    if not TG_TOKEN or not TG_CHAT_ID:
+    if not NOTIFY_URL or not NOTIFY_TOKEN:
+        log.warning("alert skipped: NOTIFY_URL/NOTIFY_TOKEN not set")
         return
-    url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
-    body = json.dumps({"chat_id": TG_CHAT_ID, "text": text}).encode()
-    req = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"})
+    body = json.dumps({"text": text}).encode()
+    req = urllib.request.Request(
+        NOTIFY_URL,
+        data=body,
+        method="POST",
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {NOTIFY_TOKEN}",
+        },
+    )
     try:
-        urllib.request.urlopen(req, timeout=10)
+        with urllib.request.urlopen(req, timeout=10) as r:
+            log.info("alert sent: %s", r.status)
     except Exception as e:
-        log.warning("tg alert failed: %s", e)
+        log.warning("alert failed: %s", e)
 
 
 # ---------------------------------------------------------------------------

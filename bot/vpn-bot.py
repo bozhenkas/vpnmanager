@@ -1,5 +1,3 @@
-import json
-import json
 #!/usr/bin/env python3
 """
 vpn-bot.py — телеграм-бот для управления VPN-кластером goida.fun
@@ -61,6 +59,7 @@ DOMAIN = "ru.goida.fun"
 IP_LIMIT = 4
 SERVER_IPS = {"83.147.255.98", "77.110.108.57", "89.22.230.5"}
 SUB_PORT = 9090  # внутренний порт для подписок
+NOTIFY_ALLOWED_IP = os.environ.get("NOTIFY_ALLOWED_IP", "78.107.88.21")
 SUB_DESC_KEY = "subscribe_next_description"
 LEGACY_SUB_KEY_PREFIX = "legacy_sub:"
 SUB_STUB_LOGO = Path(__file__).with_name("goida.svg")
@@ -162,6 +161,24 @@ HAPP_ROUTING_LINE = "happ://routing/onadd/" + _b64.b64encode(_json.dumps(_happ_p
 
 
 DOTENV_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+
+
+def _load_dotenv() -> None:
+    """загружает .env в os.environ, не перезаписывает уже установленные переменные."""
+    if not os.path.exists(DOTENV_PATH):
+        return
+    with open(DOTENV_PATH) as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, val = line.partition("=")
+            key = key.strip()
+            val = val.strip().strip('"').strip("'")
+            os.environ.setdefault(key, val)
+
+
+_load_dotenv()
 
 
 def load_token() -> str:
@@ -1307,9 +1324,47 @@ def read_subscription_stub_logo() -> str:
         return ""
 
 
+_notify_bot: "TelegramBot | None" = None
+
+
 class SubHandler(BaseHTTPRequestHandler):
     def log_message(self, *args):
         pass
+
+    def do_POST(self):
+        if self.path.rstrip("/") != "/notify":
+            self.send_response(404)
+            self.end_headers()
+            return
+
+        client_ip = self.headers.get("X-Real-IP", self.client_address[0])
+        if client_ip != NOTIFY_ALLOWED_IP:
+            self.send_response(403)
+            self.end_headers()
+            return
+
+        notify_token = os.environ.get("NOTIFY_TOKEN", "")
+        if not notify_token or self.headers.get("Authorization") != f"Bearer {notify_token}":
+            self.send_response(401)
+            self.end_headers()
+            return
+
+        length = int(self.headers.get("Content-Length", 0))
+        try:
+            body = json.loads(self.rfile.read(length))
+            text = str(body.get("text", ""))[:4000]
+        except Exception:
+            self.send_response(400)
+            self.end_headers()
+            return
+
+        if _notify_bot and text:
+            _notify_bot.send(OWNER_ID, text)
+
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(b'{"ok":true}')
 
     def do_GET(self):
         parts = self.path.strip("/").split("/")
@@ -2677,6 +2732,8 @@ def main():
 
     # бот
     bot = TelegramBot(token)
+    global _notify_bot
+    _notify_bot = bot
     info = bot.api("getMe")
     if not info.get("ok"):
         print("не удалось подключиться к Telegram API", file=sys.stderr)
