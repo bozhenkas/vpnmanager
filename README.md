@@ -8,21 +8,27 @@ Manages a **cascade** architecture: RU entry server → multiple exit nodes (FI,
 ## Architecture
 
 ```
-[User device]
-     │  VLESS/WS
-     ▼
-[RU entry server]  ← this repo runs here
+[Home server, RU ISP]          [Cloudflare DNS]
+  ip-watchdog (timer 5m) ──────► A ru.goida.fun
+        │ probe fail → failover       ↕ TTL=60
+        └──► POST /notify ──────────────────────────────┐
+                                                         │
+[User device]                                            │
+     │  VLESS/WS → ru.goida.fun                         │
+     ▼                                                   ▼
+[RU entry server 83.147.255.98 / .168]  ← this repo runs here
   ├── xray (3X-UI)        — inbound WS proxy to exit nodes
   ├── zapret / nfqws2     — anti-DPI for Russian ISPs
   ├── AdGuard Home        — DNS ad/tracker blocking
-  ├── vpn-bot             — Telegram management bot
+  ├── vpn-bot             — Telegram management bot + /notify relay
   ├── sub-updater         — background subscription sync daemon
   └── nginx               — TLS termination + subscription proxy
        │
-       ├──/fi   → WireGuard/VLESS → [FI exit node]
-       ├──/se   → WireGuard/VLESS → [SE exit node]
-       ├──/smart          — load-balanced smart routing
-       └──/subscribe/     → vpn-bot subscription server (port 9090)
+       ├──/fi       → VLESS → [FIN exit node 77.110.108.57]
+       ├──/se       → VLESS → [SWE exit node 89.22.230.5]
+       ├──/home     → VLESS → [Home server — RU geo routing]
+       ├──/smart    — load-balanced (FIN/SWE/hydra)
+       └──/subscribe/ → vpn-bot subscription server (port 9090)
 ```
 
 ### Subscription URL
@@ -42,7 +48,7 @@ Returns a newline-separated list of `vless://` links, base64-encoded for clients
 | **sub-updater** (`sub-updater/`) | Background daemon: syncs external subscription lists into 3X-UI |
 | **zapret / nfqws2** | Anti-DPI: bypasses Russian ISP deep packet inspection |
 | **AdGuard Home** | DNS server with ad/tracker blocking |
-| **ip-watchdog** (`ip-watchdog/`) | DNS failover placeholder, implementation TBD |
+| **ip-watchdog** (`ip-watchdog/`) | DNS failover: мониторит primary IP с домашнего сервера (рос. ISP), при блокировке переключает A-запись через Cloudflare API, алерты через `/notify` relay |
 | **nginx** | TLS (Let's Encrypt), proxies subscription endpoint |
 | **Nomad** (`deploy/nomad/`) | Cluster job files and node notes for RU/FIN/SE |
 
@@ -124,15 +130,19 @@ cp deploy/systemd/sub-updater.service /etc/systemd/system/
 systemctl enable --now sub-updater
 ```
 
-### Docker Compose (alternative)
+### ip-watchdog (домашний сервер)
 
 ```bash
-cp .env.example .env
-# fill in BOT_TOKEN, DOMAIN, PANEL_URL, PANEL_USER, PANEL_PASS
-docker compose up -d
+mkdir -p /opt/ip-watchdog /etc/ip-watchdog /var/lib/ip-watchdog
+cp ip-watchdog/watchdog.py /opt/ip-watchdog/
+cp ip-watchdog/watchdog.env.example /etc/ip-watchdog/watchdog.env
+# заполнить CF_TOKEN, NOTIFY_TOKEN
+chmod 600 /etc/ip-watchdog/watchdog.env
+cp deploy/systemd/ip-watchdog.{service,timer} /etc/systemd/system/
+systemctl daemon-reload && systemctl enable --now ip-watchdog.timer
 ```
 
-> Note: `network_mode: host` is required — the bot talks to 3X-UI on `localhost:25565`.
+Подробнее: [`ip-watchdog/README.md`](ip-watchdog/README.md)
 
 ### nginx
 
@@ -159,8 +169,9 @@ sub-updater/
   updater.py
   whitelist_manual.example.txt
 ip-watchdog/
-  watchdog.py
+  watchdog.py           — DNS failover, Cloudflare API, /notify relay
   watchdog.env.example
+  README.md
 deploy/
   systemd/
     vpn-bot.service
@@ -178,8 +189,7 @@ tests/
 web/
 research/
 legacy/
-deployer-bot/          — ignored nested repo
-docker-compose.yml      — alternative to systemd
+deployer-bot/          — ignored nested repo (собственный .git)
 .env.example
 ```
 
