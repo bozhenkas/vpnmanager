@@ -1,4 +1,4 @@
-# vpnmanager
+# goida-vpn
 
 Self-hosted VPN cluster management bot for Telegram.  
 Manages a **cascade** architecture: RU entry server → multiple exit nodes (FI, SE, …).
@@ -37,12 +37,14 @@ Returns a newline-separated list of `vless://` links, base64-encoded for clients
 |-----------|------|
 | **xray** (via 3X-UI) | Core proxy engine, VLESS+WS inbounds |
 | **3X-UI** | Web panel, manages xray config via SQLite |
-| **vpn-bot** (`src/bot/`) | Telegram bot: add/remove users, subscriptions, routing |
-| **sub-updater** (`src/sub-updater/`) | Background daemon: syncs external subscription lists into 3X-UI |
+| **vpn-bot** (`bot/`) | Telegram bot: add/remove users, subscriptions, routing |
+| **subscription** (`subscription/`) | Happ-first subscription renderer and legacy fallback logic |
+| **sub-updater** (`sub-updater/`) | Background daemon: syncs external subscription lists into 3X-UI |
 | **zapret / nfqws2** | Anti-DPI: bypasses Russian ISP deep packet inspection |
 | **AdGuard Home** | DNS server with ad/tracker blocking |
-| **smart-pro** (`src/smart-pro/`) | Script: applies custom RU-direct routing rules to xray |
+| **ip-watchdog** (`ip-watchdog/`) | DNS failover placeholder, implementation TBD |
 | **nginx** | TLS (Let's Encrypt), proxies subscription endpoint |
+| **Nomad** (`deploy/nomad/`) | Cluster job files and node notes for RU/FIN/SE |
 
 ---
 
@@ -67,16 +69,8 @@ Traffic tagged for `inbound-10004` is routed through your home server — useful
 ### zapret / nfqws2 — anti-DPI
 `nfqws2.service` applies TCP fragmentation tricks in the POSTROUTING chain. Config lives in `/opt/zapret2/lua/`. Host list is pulled from `zapret-hosts.txt` and updated via `sub-updater`.
 
-### Custom RU-direct list
-`src/smart-pro/apply-ru-direct.py` edits xray's routing table in the 3X-UI SQLite DB directly:
-- reads `/etc/smart-pro/ru-direct-custom.txt` (one domain per line)
-- inserts/updates rule `custom-ru-direct` → `direct` outbound
-- supports `--dry-run`
-
-After running, restart xray: `systemctl restart x-ui`
-
 ### Subscription updater daemon
-`src/sub-updater/updater.py` runs every 10 minutes:
+`sub-updater/updater.py` runs every 10 minutes:
 - fetches `whitelist_links.txt` (external subscription URLs)
 - parses VLESS links
 - upserts them as clients into 3X-UI via the panel API
@@ -155,25 +149,36 @@ systemctl reload nginx
 ## Directory structure
 
 ```
-src/
-  bot/
-    vpn-bot.py          — main Telegram bot (stdlib only, no pip)
-  sub-updater/
-    updater.py          — subscription sync daemon
-    whitelist_links.txt — external subscription URLs (not committed)
-  smart-pro/
-    apply-ru-direct.py  — xray routing rule manager
-
+bot/
+  vpn-bot.py
+  ru_direct_domains.py
+subscription/
+  __init__.py
+  engine.py
+sub-updater/
+  updater.py
+  whitelist_manual.example.txt
+ip-watchdog/
+  watchdog.py
+  watchdog.env.example
 deploy/
   systemd/
     vpn-bot.service
     sub-updater.service
-    smart-pro.service
     nfqws2.service
   nginx/
     ru.goida.fun.conf   — reference nginx vhost with WS proxying
     vpndeployer.ru.conf
-
+  nomad/
+    monitoring.nomad.hcl
+    b3-migrate-deployer.sh
+    README.md
+  zapret2/ru/
+tests/
+web/
+research/
+legacy/
+deployer-bot/          — ignored nested repo
 docker-compose.yml      — alternative to systemd
 .env.example
 ```

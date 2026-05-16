@@ -1,0 +1,56 @@
+# zapret2 config - RU goida, tuned 2026-05-12
+# source: bol-van/zapret2 v0.9.5.x manual + Flowseal-style strategies
+# goal: keep YouTube on RU egress stable under partial TSPU/DPI drops.
+# YouTube hostlist gets narrow QUIC/TLS desync; diagnostics must use
+# real googlevideo/yt-dlp downloads, not ping or generate_204 only.
+# keep Discord/general anti-dpi without broad ipset-all fallback for video traffic.
+
+IFACE_WAN=ens3
+WS_USER=tpws
+
+SET_MAXELEM=522288
+IPSET_OPT="hashsize 262144 maxelem $SET_MAXELEM"
+IP2NET_OPT4="--prefix-length=22-30 --v4-threshold=3/4"
+IP2NET_OPT6="--prefix-length=56-64 --v6-threshold=5"
+
+AUTOHOSTLIST_INCOMING_MAXSEQ=4096
+AUTOHOSTLIST_RETRANS_MAXSEQ=32768
+AUTOHOSTLIST_RETRANS_RESET=1
+AUTOHOSTLIST_RETRANS_THRESHOLD=3
+AUTOHOSTLIST_FAIL_THRESHOLD=3
+AUTOHOSTLIST_FAIL_TIME=60
+AUTOHOSTLIST_UDP_IN=1
+AUTOHOSTLIST_UDP_OUT=4
+AUTOHOSTLIST_DEBUGLOG=0
+
+MDIG_THREADS=30
+MDIG_EAGAIN=10
+MDIG_EAGAIN_DELAY=500
+GZIP_LISTS=1
+
+DESYNC_MARK=0x40000000
+DESYNC_MARK_POSTNAT=0x20000000
+
+NFQWS2_ENABLE=1
+NFQWS2_PORTS_TCP=80,443,2053,2083,2087,2096,8443
+NFQWS2_PORTS_UDP=443,19294-19344,50000-50100
+NFQWS2_TCP_PKT_OUT=20
+NFQWS2_TCP_PKT_IN=10
+NFQWS2_UDP_PKT_OUT=10
+NFQWS2_UDP_PKT_IN=5
+
+NFQWS2_OPT="
+--blob=quic_google:@/opt/zapret2/binaries/quic_initial_www_google_com.bin
+--blob=tls_google:@/opt/zapret2/binaries/tls_clienthello_www_google_com.bin
+--blob=tls_4pda:@/opt/zapret2/binaries/tls_clienthello_4pda_to.bin
+--filter-udp=443 --filter-l7=quic --hostlist=/opt/zapret2/ipset/list-google.txt --hostlist-exclude=/opt/zapret2/ipset/list-exclude.txt --hostlist-exclude=/opt/zapret2/ipset/list-exclude-user.txt --ipset-exclude=/opt/zapret2/ipset/ipset-exclude.txt --ipset-exclude=/opt/zapret2/ipset/ipset-exclude-user.txt --payload=quic_initial --lua-desync=fake:blob=quic_google:repeats=8 --new
+--filter-tcp=443 --filter-l7=tls --hostlist=/opt/zapret2/ipset/list-google.txt --hostlist-exclude=/opt/zapret2/ipset/list-exclude.txt --hostlist-exclude=/opt/zapret2/ipset/list-exclude-user.txt --ipset-exclude=/opt/zapret2/ipset/ipset-exclude.txt --ipset-exclude=/opt/zapret2/ipset/ipset-exclude-user.txt --payload=tls_client_hello --lua-desync=multisplit:pos=1:seqovl=681:seqovl_pattern=tls_google:ip_id=zero --new
+--filter-udp=443 --filter-l7=quic --hostlist=/opt/zapret2/ipset/list-general.txt --hostlist=/opt/zapret2/ipset/list-general-user.txt --hostlist-exclude=/opt/zapret2/ipset/list-exclude.txt --hostlist-exclude=/opt/zapret2/ipset/list-exclude-user.txt --ipset-exclude=/opt/zapret2/ipset/ipset-exclude.txt --ipset-exclude=/opt/zapret2/ipset/ipset-exclude-user.txt --payload=quic_initial --lua-desync=fake:blob=quic_google:repeats=6 --new
+--filter-udp=19294-19344,50000-50100 --filter-l7=discord,stun --lua-desync=fake:blob=quic_google:repeats=6:optional --new
+--filter-tcp=2053,2083,2087,2096,8443 --hostlist-domains=discord.media --payload=tls_client_hello --lua-desync=multisplit:pos=1:seqovl=681:seqovl_pattern=tls_google --new
+--filter-tcp=80,443 --hostlist=/opt/zapret2/ipset/list-general.txt --hostlist=/opt/zapret2/ipset/list-general-user.txt --hostlist-exclude=/opt/zapret2/ipset/list-exclude.txt --hostlist-exclude=/opt/zapret2/ipset/list-exclude-user.txt --ipset-exclude=/opt/zapret2/ipset/ipset-exclude.txt --ipset-exclude=/opt/zapret2/ipset/ipset-exclude-user.txt --lua-desync=multisplit:pos=1:seqovl=568:seqovl_pattern=tls_4pda
+"
+
+MODE_FILTER=none
+FLOWOFFLOAD=donttouch
+INIT_APPLY_FW=1

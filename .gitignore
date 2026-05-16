@@ -10,9 +10,12 @@ subscriptions/
 *.bak.*
 *.broken*
 *.broken2
+subs-backup-*.txt
 
 # memory palace — не для публичного репо
 .claude/
+.Codex/
+deployer-bot/
 
 # python
 __pycache__/
@@ -21,3 +24,4 @@ __pycache__/
 
 # os
 .DS_Store
+legacy/research/vendor/

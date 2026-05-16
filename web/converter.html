@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Конвертер URI — Фонд «Свободное Слово»</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Source+Sans+3:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ink: #1a1a2e;
+            --paper: #f5f0eb;
+            --accent: #c0392b;
+            --accent-light: #e74c3c;
+            --gold: #d4a574;
+            --gold-light: #e8c9a0;
+            --muted: #7f8c8d;
+            --divider: #d5cec7;
+            --cream: #faf7f2;
+            --green: #27ae60;
+            --green-light: #2ecc71;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Source Sans 3', Georgia, serif;
+            background: var(--paper);
+            color: var(--ink);
+            line-height: 1.7;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ====== HEADER ====== */
+        .masthead {
+            border-bottom: 3px double var(--ink);
+            padding: 1.2rem 2rem 0.8rem;
+            text-align: center;
+        }
+
+        .masthead h1 {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 1.8rem;
+            font-weight: 900;
+        }
+
+        .masthead h1 span { color: var(--accent); }
+
+        .masthead a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        nav {
+            border-bottom: 1px solid var(--divider);
+            padding: 0.7rem 2rem;
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+
+        nav a {
+            text-decoration: none;
+            color: var(--ink);
+            font-size: 0.8rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+
+        nav a:hover { color: var(--accent); }
+        nav a.active { color: var(--accent); border-bottom: 2px solid var(--accent); padding-bottom: 2px; }
+
+        /* ====== MAIN ====== */
+        .main {
+            flex: 1;
+            max-width: 860px;
+            margin: 0 auto;
+            padding: clamp(2rem, 5vw, 4rem) clamp(1.5rem, 4vw, 3rem);
+            width: 100%;
+        }
+
+        .page-title {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 2rem;
+            font-weight: 900;
+            margin-bottom: 0.5rem;
+        }
+
+        .page-subtitle {
+            color: var(--muted);
+            font-size: 1rem;
+            margin-bottom: 2.5rem;
+            line-height: 1.6;
+        }
+
+        /* ====== CONVERTER ====== */
+        .converter-box {
+            border: 1px solid var(--divider);
+            background: var(--cream);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .field-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .field-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .field-label {
+            font-size: 0.7rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: var(--muted);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .field-label .badge {
+            font-size: 0.6rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 2px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+
+        .badge-input {
+            background: var(--accent);
+            color: white;
+        }
+
+        .badge-output {
+            background: var(--green);
+            color: white;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            line-height: 1.8;
+            border: 2px solid var(--divider);
+            background: white;
+            color: var(--ink);
+            resize: vertical;
+            transition: border-color 0.3s;
+            outline: none;
+        }
+
+        textarea:focus {
+            border-color: var(--accent);
+        }
+
+        textarea.output {
+            background: var(--ink);
+            color: var(--gold-light);
+            border-color: var(--ink);
+        }
+
+        textarea.output:focus {
+            border-color: var(--gold);
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 0.8rem;
+            margin: 1.5rem 0;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.7rem 1.8rem;
+            font-family: 'Source Sans 3', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            border: 2px solid;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-light);
+            border-color: var(--accent-light);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--ink);
+            border-color: var(--ink);
+        }
+
+        .btn-secondary:hover {
+            background: var(--ink);
+            color: var(--paper);
+        }
+
+        .btn-copy {
+            background: transparent;
+            color: var(--green);
+            border-color: var(--green);
+        }
+
+        .btn-copy:hover {
+            background: var(--green);
+            color: white;
+        }
+
+        .btn-copy.copied {
+            background: var(--green);
+            color: white;
+        }
+
+        /* ====== STATUS ====== */
+        .status {
+            padding: 0.8rem 1.2rem;
+            font-size: 0.85rem;
+            margin-bottom: 1.5rem;
+            display: none;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status.visible { display: flex; }
+
+        .status-success {
+            background: rgba(39, 174, 96, 0.1);
+            border-left: 3px solid var(--green);
+            color: var(--green);
+        }
+
+        .status-error {
+            background: rgba(192, 57, 43, 0.1);
+            border-left: 3px solid var(--accent);
+            color: var(--accent);
+        }
+
+        .status-info {
+            background: rgba(212, 165, 116, 0.1);
+            border-left: 3px solid var(--gold);
+            color: #8a6d3b;
+        }
+
+        /* ====== DETAILS ====== */
+        .details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1.5rem;
+            display: none;
+        }
+
+        .details-table.visible { display: table; }
+
+        .details-table caption {
+            font-size: 0.7rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: var(--muted);
+            text-align: left;
+            padding-bottom: 0.8rem;
+        }
+
+        .details-table td {
+            padding: 0.5rem 0.8rem;
+            font-size: 0.85rem;
+            border-bottom: 1px solid var(--divider);
+            vertical-align: top;
+        }
+
+        .details-table td:first-child {
+            font-weight: 600;
+            width: 140px;
+            color: var(--muted);
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .details-table td:last-child {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            word-break: break-all;
+        }
+
+        .changed {
+            color: var(--green) !important;
+            font-weight: 500;
+        }
+
+        /* ====== INFO SECTION ====== */
+        .info-section {
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--divider);
+        }
+
+        .info-section h3 {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+        }
+
+        .info-section p {
+            color: #555;
+            font-size: 0.95rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .info-section code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            background: rgba(0,0,0,0.05);
+            padding: 0.15rem 0.4rem;
+            border-radius: 2px;
+        }
+
+        /* ====== FOOTER ====== */
+        footer {
+            border-top: 3px double var(--ink);
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        footer .footer-name {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 0.3rem;
+        }
+
+        footer p {
+            font-size: 0.75rem;
+            color: var(--muted);
+        }
+
+        @media (max-width: 600px) {
+            .btn-row { flex-direction: column; }
+            .btn { text-align: center; }
+            nav { gap: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<header class="masthead">
+    <a href="/"><h1>Фонд «<span>Свободное</span> Слово»</h1></a>
+</header>
+
+<nav>
+    <a href="/">Главная</a>
+    <a href="/converter" class="active">Конвертер</a>
+    <a href="/#principles">Принципы</a>
+    <a href="/#resources">Ресурсы</a>
+</nav>
+
+<main class="main">
+    <h2 class="page-title">Конвертер URI</h2>
+    <p class="page-subtitle">
+        Преобразование внутренних ссылок подключения в корректный формат 
+        с TLS-шифрованием и внешним портом. Поддерживается пакетная обработка — 
+        вставьте несколько ссылок, каждую с новой строки.
+    </p>
+
+    <div class="converter-box">
+        <div class="field-group">
+            <div class="field-label">
+                <span class="badge badge-input">Вход</span>
+                Исходные ссылки (по одной на строку)
+            </div>
+            <textarea id="input" placeholder="vless://uuid@ru.goida.fun:10001/?type=ws&security=none&path=%2Ffi#name&#10;vless://uuid@ru.goida.fun:10002/?type=ws&security=none&path=%2Fse#name"></textarea>
+        </div>
+
+        <div class="btn-row">
+            <button class="btn btn-primary" onclick="convert()">Конвертировать</button>
+            <button class="btn btn-secondary" onclick="clearAll()">Очистить</button>
+        </div>
+
+        <div class="status" id="status"></div>
+
+        <div class="field-group">
+            <div class="field-label">
+                <span class="badge badge-output">Выход</span>
+                Исправленные ссылки
+            </div>
+            <textarea id="output" class="output" readonly placeholder="Результат появится здесь..."></textarea>
+        </div>
+
+        <div class="btn-row">
+            <button class="btn btn-copy" id="copyBtn" onclick="copyOutput()">Копировать всё</button>
+        </div>
+
+        <table class="details-table" id="details">
+            <caption>Внесённые изменения</caption>
+            <tbody id="detailsBody"></tbody>
+        </table>
+    </div>
+
+    <div class="info-section">
+        <h3>Что исправляет конвертер</h3>
+        <p>
+            Панель управления генерирует ссылки с внутренними параметрами сервера 
+            (локальные порты, отсутствие шифрования), которые не работают для внешнего подключения. 
+            Конвертер автоматически применяет следующие исправления:
+        </p>
+        <p>
+            <strong>Порт:</strong> любой внутренний порт (например <code>10001</code>, <code>10002</code>) 
+            заменяется на <code>443</code> — стандартный порт HTTPS, на котором работает внешний TLS-терминатор.
+        </p>
+        <p>
+            <strong>Шифрование:</strong> параметр <code>security=none</code> заменяется на <code>security=tls</code>, 
+            добавляется корректный <code>sni</code> для TLS-рукопожатия.
+        </p>
+        <p>
+            <strong>Хост:</strong> пустые или некорректные значения <code>host</code> исправляются 
+            на доменное имя сервера.
+        </p>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-name">Фонд «Свободное Слово»</div>
+    <p>© 2019–2026 · Инструменты цифровой безопасности</p>
+</footer>
+
+<script>
+function parseVlessUrl(url) {
+    const trimmed = url.trim();
+    if (!trimmed.startsWith('vless://')) return null;
+
+    try {
+        // vless://uuid@host:port/?params#fragment
+        const withoutScheme = trimmed.slice(8); // remove "vless://"
+        const [beforeFragment, fragment] = withoutScheme.split('#');
+        const [userHost, queryString] = beforeFragment.split('?');
+        const [uuidPart, hostPort] = userHost.split('@');
+        
+        // Handle IPv6 or normal host:port
+        let host, port;
+        const lastColon = hostPort.lastIndexOf(':');
+        if (lastColon !== -1) {
+            // Check if path is after port
+            const hostPortClean = hostPort.replace(/\/$/, '');
+            const lc = hostPortClean.lastIndexOf(':');
+            host = hostPortClean.substring(0, lc);
+            port = hostPortClean.substring(lc + 1).replace('/', '');
+        } else {
+            host = hostPort.replace(/\/$/, '');
+            port = '443';
+        }
+
+        // Parse query params
+        const params = {};
+        if (queryString) {
+            queryString.split('&').forEach(pair => {
+                const [key, val] = pair.split('=');
+                if (key) params[decodeURIComponent(key)] = val ? decodeURIComponent(val) : '';
+            });
+        }
+
+        return {
+            uuid: uuidPart,
+            host: host,
+            port: port,
+            params: params,
+            fragment: fragment || ''
+        };
+    } catch (e) {
+        return null;
+    }
+}
+
+function buildVlessUrl(parsed) {
+    const paramStr = Object.entries(parsed.params)
+        .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+        .join('&');
+    
+    const fragment = parsed.fragment ? '#' + parsed.fragment : '';
+    return `vless://${parsed.uuid}@${parsed.host}:${parsed.port}/?${paramStr}${fragment}`;
+}
+
+function convert() {
+    const input = document.getElementById('input').value.trim();
+    const statusEl = document.getElementById('status');
+    const outputEl = document.getElementById('output');
+    const detailsEl = document.getElementById('details');
+    const detailsBody = document.getElementById('detailsBody');
+
+    if (!input) {
+        showStatus('error', 'Вставьте хотя бы одну ссылку');
+        return;
+    }
+
+    const lines = input.split('\n').filter(l => l.trim());
+    const results = [];
+    const allChanges = [];
+    let errors = 0;
+
+    lines.forEach((line, idx) => {
+        const parsed = parseVlessUrl(line);
+        if (!parsed) {
+            errors++;
+            results.push('# ОШИБКА: не удалось разобрать строку ' + (idx + 1));
+            return;
+        }
+
+        const changes = [];
+        const label = parsed.fragment || ('строка ' + (idx + 1));
+
+        // Fix port
+        if (parsed.port !== '443') {
+            changes.push(`Порт: ${parsed.port} → 443`);
+            parsed.port = '443';
+        }
+
+        // Fix security
+        if (!parsed.params.security || parsed.params.security === 'none') {
+            changes.push(`Security: ${parsed.params.security || 'отсутствует'} → tls`);
+            parsed.params.security = 'tls';
+        }
+
+        // Fix/add SNI
+        if (!parsed.params.sni || parsed.params.sni === '') {
+            changes.push(`SNI: добавлен → ${parsed.host}`);
+            parsed.params.sni = parsed.host;
+        }
+
+        // Fix empty host param (WebSocket host header)
+        if (parsed.params.hasOwnProperty('host') && parsed.params.host === '') {
+            changes.push(`Host header: пусто → ${parsed.host}`);
+            parsed.params.host = parsed.host;
+        }
+
+        // Remove encryption=none (it's default for VLESS)
+        if (parsed.params.encryption === 'none') {
+            delete parsed.params.encryption;
+        }
+
+        // Reorder params for cleanliness
+        const ordered = {};
+        const order = ['type', 'security', 'sni', 'path', 'host', 'fp', 'pbk', 'sid', 'spx', 'flow', 'encryption'];
+        order.forEach(key => {
+            if (parsed.params[key] !== undefined) {
+                ordered[key] = parsed.params[key];
+            }
+        });
+        // Any remaining params
+        Object.keys(parsed.params).forEach(key => {
+            if (!ordered.hasOwnProperty(key)) {
+                ordered[key] = parsed.params[key];
+            }
+        });
+        parsed.params = ordered;
+
+        results.push(buildVlessUrl(parsed));
+
+        if (changes.length > 0) {
+            allChanges.push({ label, changes });
+        } else {
+            allChanges.push({ label, changes: ['Изменений не требуется'] });
+        }
+    });
+
+    outputEl.value = results.join('\n');
+
+    // Show changes details
+    detailsBody.innerHTML = '';
+    allChanges.forEach(item => {
+        const tr = document.createElement('tr');
+        const nameCell = document.createElement('td');
+        nameCell.textContent = item.label;
+        const changesCell = document.createElement('td');
+        changesCell.innerHTML = item.changes.map(c => {
+            if (c === 'Изменений не требуется') return `<span style="color:var(--muted)">${c}</span>`;
+            return `<span class="changed">✓ ${c}</span>`;
+        }).join('<br>');
+        tr.appendChild(nameCell);
+        tr.appendChild(changesCell);
+        detailsBody.appendChild(tr);
+    });
+    detailsEl.classList.add('visible');
+
+    const converted = lines.length - errors;
+    if (errors > 0) {
+        showStatus('info', `Обработано: ${converted} из ${lines.length} (ошибок: ${errors})`);
+    } else {
+        showStatus('success', `Успешно конвертировано: ${converted} ${pluralize(converted)}`);
+    }
+}
+
+function pluralize(n) {
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return 'ссылка';
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'ссылки';
+    return 'ссылок';
+}
+
+function showStatus(type, message) {
+    const el = document.getElementById('status');
+    el.className = `status visible status-${type}`;
+    const icons = { success: '✓', error: '✗', info: 'ℹ' };
+    el.innerHTML = `<strong>${icons[type]}</strong> ${message}`;
+}
+
+function copyOutput() {
+    const output = document.getElementById('output');
+    const btn = document.getElementById('copyBtn');
+    
+    if (!output.value) return;
+    
+    navigator.clipboard.writeText(output.value).then(() => {
+        btn.textContent = 'Скопировано ✓';
+        btn.classList.add('copied');
+        setTimeout(() => {
+            btn.textContent = 'Копировать всё';
+            btn.classList.remove('copied');
+        }, 2000);
+    }).catch(() => {
+        output.select();
+        document.execCommand('copy');
+        btn.textContent = 'Скопировано ✓';
+        btn.classList.add('copied');
+        setTimeout(() => {
+            btn.textContent = 'Копировать всё';
+            btn.classList.remove('copied');
+        }, 2000);
+    });
+}
+
+function clearAll() {
+    document.getElementById('input').value = '';
+    document.getElementById('output').value = '';
+    document.getElementById('status').className = 'status';
+    document.getElementById('details').classList.remove('visible');
+}
+</script>
+
+</body>
+</html>
+root@ru:/var/www/html#

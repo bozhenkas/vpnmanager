@@ -1,0 +1,13 @@
+# test pool for rkn-dpi-auto-updater.py
+#
+# format:
+#   name url-or-host
+#
+# keep this conservative. googleapis/gstatic/googleusercontent are intentionally
+# absent from youtube targets.
+
+youtube https://www.youtube.com/generate_204
+youtube-video https://rr1---sn-n8v7kn7s.googlevideo.com/generate_204
+instagram https://www.instagram.com/
+discord https://discord.com/
+telegram https://web.telegram.org/

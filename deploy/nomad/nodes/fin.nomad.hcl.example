@@ -1,0 +1,16 @@
+# /etc/nomad.d/nomad.hcl on FIN
+datacenter = "goida"
+data_dir   = "/opt/nomad"
+bind_addr  = "0.0.0.0"
+
+server {
+  enabled          = true
+  bootstrap_expect = 3
+}
+
+client {
+  enabled = true
+}
+
+# persistent volume root:
+# /opt/nomad/volumes/pgdata

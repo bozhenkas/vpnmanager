@@ -1,0 +1,142 @@
+{
+  "log": {
+    "access": "/var/log/xray-access.log",
+    "dnsLog": false,
+    "error": "",
+    "loglevel": "warning",
+    "maskAddress": "32"
+  },
+  "routing": {
+    "domainStrategy": "IPIfNonMatch",
+    "balancers": [
+      {
+        "tag": "balancer-hydra",
+        "selector": ["hydra-"],
+        "strategy": {"type": "roundRobin"}
+      }
+    ],
+    "rules": [
+      {
+        "type": "field",
+        "inboundTag": ["api"],
+        "outboundTag": "api"
+      },
+      {
+        "type": "field",
+        "protocol": ["bittorrent"],
+        "outboundTag": "blocked"
+      },
+      {
+        "type": "field",
+        "ip": ["geoip:private"],
+        "outboundTag": "direct"
+      },
+      {
+        "type": "field",
+        "inboundTag": ["inbound-10003"],
+        "domain": ["geosite:youtube", "domain:googlevideo.com"],
+        "network": "tcp",
+        "outboundTag": "direct-zapret"
+      },
+      {
+        "type": "field",
+        "inboundTag": ["inbound-10003"],
+        "domain": ["geosite:youtube", "domain:googlevideo.com"],
+        "network": "udp",
+        "port": "443",
+        "outboundTag": "direct-zapret"
+      },
+      {
+        "type": "field",
+        "inboundTag": ["inbound-10004"],
+        "outboundTag": "direct-zapret"
+      },
+      {
+        "type": "field",
+        "inboundTag": ["inbound-10003"],
+        "domain": ["geosite:category-ru"],
+        "outboundTag": "direct"
+      },
+      {
+        "type": "field",
+        "inboundTag": ["inbound-10003"],
+        "ip": ["geoip:ru"],
+        "outboundTag": "direct"
+      },
+      {
+        "type": "field",
+        "inboundTag": ["socks-bot"],
+        "balancerTag": "balancer-hydra"
+      },
+      {
+        "type": "field",
+        "inboundTag": ["inbound-10003"],
+        "balancerTag": "balancer-hydra"
+      }
+    ]
+  },
+  "inbounds": [
+    {
+      "tag": "socks-bot",
+      "listen": "127.0.0.1",
+      "port": 9099,
+      "protocol": "socks",
+      "settings": {"auth": "noauth", "udp": false}
+    }
+  ],
+  "outbounds": [
+    {
+      "tag": "direct",
+      "protocol": "freedom",
+      "settings": {"domainStrategy": "UseIPv4"}
+    },
+    {
+      "tag": "direct-zapret",
+      "protocol": "freedom",
+      "settings": {"domainStrategy": "UseIPv4"},
+      "streamSettings": {
+        "sockopt": {"mark": 200}
+      }
+    },
+    {
+      "tag": "blocked",
+      "protocol": "blackhole",
+      "settings": {}
+    },
+    {
+      "tag": "dns-out",
+      "protocol": "dns",
+      "settings": {}
+    }
+  ],
+  "policy": {
+    "levels": {
+      "0": {
+        "statsUserDownlink": true,
+        "statsUserUplink": true
+      }
+    },
+    "system": {
+      "statsInboundDownlink": true,
+      "statsInboundUplink": true,
+      "statsOutboundDownlink": false,
+      "statsOutboundUplink": false
+    }
+  },
+  "api": {
+    "tag": "api",
+    "services": ["HandlerService", "LoggerService", "StatsService"]
+  },
+  "stats": {},
+  "dns": {
+    "servers": [
+      {
+        "address": "8.8.8.8",
+        "domains": ["geosite:google", "geosite:youtube", "domain:googlevideo.com"],
+        "clientIp": "188.243.191.1"
+      },
+      "https+local://1.1.1.1/dns-query"
+    ],
+    "queryStrategy": "UseIPv4"
+  }
+}
