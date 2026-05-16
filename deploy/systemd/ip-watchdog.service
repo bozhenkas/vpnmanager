@@ -1,0 +1,12 @@
+[Unit]
+Description=ip-watchdog DNS failover
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/ip-watchdog/watchdog.env
+ExecStart=/usr/bin/python3 /opt/ip-watchdog/watchdog.py
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ip-watchdog

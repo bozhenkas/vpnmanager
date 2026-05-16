@@ -1,0 +1,11 @@
+[Unit]
+Description=ip-watchdog DNS failover timer
+Requires=ip-watchdog.service
+
+[Timer]
+OnCalendar=*:0/5
+AccuracySec=30s
+Persistent=true
+
+[Install]
+WantedBy=timers.target
