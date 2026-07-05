@@ -1,0 +1,46 @@
+{
+  "_comment": "карта линков RU->exit для goida-intermesh-switch. реальный файл -> /etc/goida-intermesh/links.json. секретов тут НЕТ. switch генерирует routing для xray-intermesh: inbound -> outbound|block.",
+  "fin": {
+    "listen": 18001,
+    "inbound": "in-fin",
+    "signature_target": "fin",
+    "outbounds": {
+      "xhttp-reality": "out-fin-xhttp-reality",
+      "hy2-fallback": "out-fin-hy2-fallback"
+    },
+    "probe": {
+      "xhttp-reality": "77.110.108.57:443",
+      "hy2-fallback": "127.0.0.1:17455"
+    },
+    "_note": "primary=xHTTP Reality RU->FIN:443; fallback=HY2 salamander через локальный socks5/tcp-forward на RU"
+  },
+  "swe": {
+    "listen": 18002,
+    "inbound": "in-swe",
+    "signature_target": "swe",
+    "outbounds": {
+      "xhttp-reality": "out-swe-xhttp-reality",
+      "hy2-fallback": "out-swe-hy2-fallback"
+    },
+    "probe": {
+      "xhttp-reality": "89.22.230.5:443",
+      "hy2-fallback": "127.0.0.1:17456"
+    },
+    "_note": "primary=xHTTP Reality RU->SWE:443; fallback=HY2 salamander через локальный socks5/tcp-forward на RU"
+  },
+  "fra": {
+    "listen": 18003,
+    "inbound": "in-fra",
+    "signature_target": "fra",
+    "default_stage": "epilepsy",
+    "outbounds": {
+      "epilepsy": "out-fra-epilepsy",
+      "hy2-fallback": "out-fra-hy2-fallback"
+    },
+    "probe": {
+      "epilepsy": "127.0.0.1:17452",
+      "hy2-fallback": "127.0.0.1:17454"
+    },
+    "_note": "primary=epilepsy PostgreSQL-camouflage RU->FRA; fallback=HY2 salamander через локальный tcpForwarding 127.0.0.1:17454 на RU"
+  }
+}

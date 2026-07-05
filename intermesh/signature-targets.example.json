@@ -1,0 +1,42 @@
+{
+  "_comment": "Ladon signature matrix for analyzer. RU/HOME run Ladon CLI probes for targets with domain+ladon=true. Raw-IP backup precheck stays in ip-watchdog because Ladon CLI v1 cannot force IP with ru.goida.fun SNI.",
+  "ru-primary": {
+    "domain": "ru.goida.fun",
+    "ip": "45.91.54.152",
+    "observer_only": true
+  },
+  "ru-backup": {
+    "domain": "",
+    "ip": "45.91.53.93",
+    "observer_only": true,
+    "ladon": false,
+    "reason": "Ladon CLI v1 cannot probe raw IP with ru.goida.fun SNI"
+  },
+  "reserve": {
+    "domain": "reserve.goida.fun",
+    "ip": "31.77.169.26",
+    "observer_only": true
+  },
+  "fin": {
+    "domain": "fin.goida.fun",
+    "ip": "77.110.108.57",
+    "link": "fin"
+  },
+  "swe": {
+    "domain": "swe.goida.fun",
+    "ip": "89.22.230.5",
+    "link": "swe"
+  },
+  "fra": {
+    "domain": "fra.goida.fun",
+    "ip": "95.163.152.210",
+    "link": "fra"
+  },
+  "home-observer": {
+    "domain": "",
+    "ip": "78.107.88.21",
+    "observer_only": true,
+    "ladon": false,
+    "reason": "HOME is the remote vantage point, not a switch target"
+  }
+}

@@ -1,0 +1,6 @@
+# /etc/ru-geo-analyzer/deny.txt — host-ы, которые ru-geo-updater НИКОГДА не
+# добавляет в direct автоматически (по одному на строку, # = комментарий).
+# Сюда — 3rd-party ingress'ы и всё, что должно идти через VPN несмотря на RU-гео.
+
+# 3rd-party Hydra ingress (доставка подписки) — решать вручную, не авто-direct
+sub.whitestore.club
