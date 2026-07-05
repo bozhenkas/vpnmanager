@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <title>analytics</title>
+  <link rel="preload" href="/Inter-Regular.ttf" as="font" type="font/truetype" crossorigin>
+  <script src="/telegram-web-app.js"></script>
+  <style>
+    @font-face {
+      font-family: "Inter";
+      src: url("/Inter-Regular.ttf") format("truetype");
+      font-weight: 400; font-style: normal; font-display: block;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    :root {
+      --bg: #0a0a0b;
+      --surface: rgba(255,255,255,0.035);
+      --surface2: rgba(255,255,255,0.055);
+      --text: #f2f2f5;
+      --t2: rgba(255,255,255,0.58);
+      --t3: rgba(255,255,255,0.34);
+      --line: rgba(255,255,255,0.08);
+      --blue: #4097ff;
+      --pink: #e7a0dc;
+      --red: #f61d2c;
+      --green: #30d158;
+      --orange: #ffb340;
+      --r: 8px;
+      --ls: -0.04em;
+    }
+
+    html, body { min-height: 100%; }
+    body {
+      font-family: "Inter", system-ui, sans-serif;
+      font-weight: 400;
+      letter-spacing: var(--ls);
+      color: var(--text);
+      background: var(--bg);
+      background-attachment: fixed;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .app {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 16px 16px calc(26px + env(safe-area-inset-bottom));
+      animation: fadeIn .35s ease both;
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+    .glass {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--r);
+    }
+
+    .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+    .logo { width: min(166px, 48vw); height: auto; }
+    .back {
+      display: none; align-items: center; justify-content: center;
+      width: 34px; height: 34px; border-radius: var(--r);
+      border: 1px solid var(--line); background: rgba(255,255,255,0.04);
+      color: var(--t2); font: inherit; cursor: pointer;
+    }
+    .detail-mode .back { display: flex; }
+
+    .status {
+      display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 12px;
+      margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--line);
+    }
+    .count { font-size: 30px; line-height: 1; }
+    .label { font-size: 13px; color: var(--t2); }
+    .updated { font-size: 11px; color: var(--t3); text-align: right; }
+    .error { display: none; margin-bottom: 12px; color: var(--red); font-size: 13px; }
+    .error.visible { display: block; }
+    .alert { display: none; margin-bottom: 12px; padding: 9px 10px; color: var(--orange); font-size: 12px; }
+    .alert.visible { display: block; }
+
+    .section { margin-top: 16px; }
+    .section-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+    .section-title { font-size: 12px; color: var(--t3); letter-spacing: var(--ls); }
+    .section-meta { font-size: 11px; color: var(--t3); }
+
+    .fleet { display: grid; gap: 8px; }
+    .node-row {
+      width: 100%; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer;
+      display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px;
+      padding: 12px;
+    }
+    .dot { width: 7px; height: 7px; border-radius: 50%; }
+    .dot.online { background: var(--blue); box-shadow: 0 0 7px rgba(64,151,255,.65); }
+    .dot.offline { background: var(--red); }
+    .dot.loading { background: var(--t3); animation: blink 1.4s ease infinite; }
+    @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: .25; } }
+    .node-main { min-width: 0; }
+    .node-name { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .node-sub { margin-top: 2px; font-size: 11px; color: var(--t3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .node-load { font-size: 12px; color: var(--t2); white-space: nowrap; text-align: right; }
+
+    .rings { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .ring-cell { display: flex; flex-direction: column; align-items: center; gap: 7px; min-width: 0; }
+    .ring-wrap { position: relative; width: 74px; height: 74px; }
+    .ring-disc { position: absolute; inset: 0; border-radius: 50%; background: #242428; }
+    .ring-fill {
+      position: absolute; inset: 0; border-radius: 50%;
+      background: conic-gradient(from 0deg, var(--blue) 0deg, var(--pink) 198deg, var(--red) 360deg);
+      -webkit-mask: conic-gradient(from 0deg, #000 0 var(--deg), transparent var(--deg) 360deg);
+              mask: conic-gradient(from 0deg, #000 0 var(--deg), transparent var(--deg) 360deg);
+    }
+    .ring-hole {
+      position: absolute; inset: 6px; border-radius: 50%; background: #16161a;
+      display: flex; align-items: center; justify-content: center; font-size: 15px;
+    }
+    .ring-key { font-size: 10px; color: var(--t3); letter-spacing: var(--ls); }
+    .ring-meta { margin-top: -3px; font-size: 11px; color: var(--t2); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .map { position: relative; padding: 8px; overflow: hidden; }
+    .routes { display: grid; gap: 6px; }
+    .route { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 8px; border: 1px solid var(--line); border-radius: var(--r); }
+    .route-name { font-size: 12px; color: var(--t2); min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .route-val { font-size: 12px; color: var(--text); white-space: nowrap; }
+    .route.inferred .route-name { color: var(--t3); }
+    .route.inferred { border-style: dashed; }
+
+    .detail-title { margin-bottom: 12px; }
+    .detail-title h1 { font-size: 28px; line-height: 1; font-weight: 400; letter-spacing: var(--ls); }
+    .detail-title p { margin-top: 5px; font-size: 13px; color: var(--t2); }
+
+    .table { display: grid; gap: 1px; overflow: hidden; }
+    .line {
+      display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 9px;
+      padding: 9px 10px; background: rgba(255,255,255,0.032);
+    }
+    .line-name { min-width: 0; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .line-sub { font-size: 10px; color: var(--t3); letter-spacing: var(--ls); }
+    .line-load { display: flex; align-items: center; justify-content: flex-end; gap: 7px; font-size: 11px; color: var(--t2); white-space: nowrap; text-align: right; }
+
+    .logs { display: grid; gap: 6px; }
+    .log-line { padding: 8px 9px; font: 11px "Inter", system-ui, sans-serif; letter-spacing: var(--ls); color: var(--t2); white-space: pre-wrap; word-break: break-word; background: rgba(255,255,255,0.032); border-radius: var(--r); }
+
+    .shell { padding: 10px; }
+    .shell-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+    .shell-input {
+      min-width: 0; height: 38px; padding: 0 10px; border-radius: var(--r);
+      border: 1px solid var(--line); background: rgba(0,0,0,0.22); color: var(--text);
+      font: 12px "Inter", system-ui, sans-serif; letter-spacing: var(--ls);
+    }
+    .btn {
+      min-height: 38px; padding: 0 14px; border-radius: var(--r);
+      border: 1px solid rgba(255,255,255,0.10); background: rgba(255,255,255,0.065);
+      color: var(--text); font: inherit; cursor: pointer;
+    }
+    .section-head .btn, .line-load .btn { min-height: 30px; padding: 0 9px; font-size: 11px; }
+    .btn:disabled { opacity: .35; cursor: default; }
+    .output {
+      margin-top: 10px; min-height: 116px; max-height: 320px; overflow: auto; padding: 10px;
+      border-radius: var(--r); background: rgba(0,0,0,0.30); border: 1px solid var(--line);
+      font: 11px "Inter", system-ui, sans-serif; letter-spacing: var(--ls);
+      color: var(--t2); white-space: pre-wrap; word-break: break-word;
+    }
+
+    .footer { margin-top: 18px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .hint { color: var(--t3); font-size: 11px; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="top">
+    <button class="back" onclick="showOverview()">‹</button>
+    <img src="/logo.svg" class="logo" alt="goida analytics">
+    <span></span>
+  </div>
+
+  <div id="overview"></div>
+  <div id="detail" class="hidden"></div>
+</div>
+
+<script>
+const tg = window.Telegram?.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
+const initData = tg?.initData || "";
+
+let nodes = [];
+let metrics = {};
+let traffic = null;
+let details = {};
+let selectedNode = "";
+let busyShell = false;
+
+const $ = id => document.getElementById(id);
+const apiHeaders = () => ({ "X-Telegram-Init-Data": initData });
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const jsq = s => JSON.stringify(String(s ?? "")).replace(/"/g, "&quot;");
+
+async function get(path) {
+  const r = await fetch(path, { headers: apiHeaders() });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+  return data;
+}
+
+async function post(path, body) {
+  const r = await fetch(path, {
+    method: "POST",
+    headers: { ...apiHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+  return data;
+}
+
+function gb(v) { return (v ?? 0).toFixed(1).replace(".", ",") + "гб"; }
+function mem(mib) {
+  if (mib == null) return "-";
+  return mib >= 1024 ? (mib / 1024).toFixed(1).replace(".", ",") + "гб" : Math.round(mib) + "мб";
+}
+function pct(v) { return `${Math.round(v ?? 0)}%`; }
+function roleRu(v) {
+  return ({ primary: "основной", vpn: "vpn", control: "управление", reserve: "резерв" })[v] || v || "";
+}
+function relationRu(v) {
+  return ({ "vpn path": "vpn-путь", control: "управление", link: "туннель", telemetry: "метрики", host: "хост", vpn: "vpn-путь", bot: "управление", tunnel: "туннель", observability: "метрики", other: "прочее" })[v] || v || "";
+}
+function nodeRu(v) {
+  return ({ clients: "клиенты", ru: "ru", fin: "fin", fra: "fra", swe: "swe", ru4: "ru-4", home: "home", hydra: "hydra" })[v] || v || "";
+}
+function kindRu(v) {
+  return ({ measured: "измерено", inferred: "схема" })[v] || v || "";
+}
+function labelRu(v) {
+  return ({
+    "public ingress": "публичный вход",
+    "smart foreign / fin": "smart через fin",
+    "smart foreign / fra": "smart через fra",
+    "smart foreign / swe": "smart через swe",
+    "gov/banks safety": "страховка гос/банки",
+    "reserve direct egress": "резерв через fin",
+    "hydra external": "hydra внешняя"
+  })[v] || v || "";
+}
+
+function ring(key, value, center, meta) {
+  const p = Math.min(Math.max(value ?? 0, 0), 100);
+  return `<div class="ring-cell">
+    <div class="ring-wrap">
+      <div class="ring-disc"></div>
+      <div class="ring-fill" style="--deg:${(p * 3.6).toFixed(1)}deg"></div>
+      <div class="ring-hole">${esc(center)}</div>
+    </div>
+    <div class="ring-key">${esc(key)}</div>
+    <div class="ring-meta">${esc(meta)}</div>
+  </div>`;
+}
+
+function ringsFor(m) {
+  if (!m || !m.online) return `<div class="log-line">нет данных</div>`;
+  const cpu = m.cpu ?? 0;
+  const ram = m.ram?.pct ?? 0;
+  const disk = m.disk?.pct ?? 0;
+  return `<div class="rings">
+    ${ring("cpu", cpu, pct(cpu), "нагрузка")}
+    ${ring("ram", ram, pct(ram), m.ram ? `${gb(m.ram.used_gb)}/${gb(m.ram.total_gb)}` : "-")}
+    ${ring("disk", disk, pct(disk), m.disk ? `${gb(m.disk.avail_gb)} свободно` : "-")}
+  </div>`;
+}
+
+function nodeSub(node, m) {
+  if (!m) return "загрузка";
+  if (!m.online) return "нет телеметрии";
+  const c = m.containers || {};
+  const parts = [];
+  if (c.vpn) parts.push(`vpn ${c.vpn}`);
+  if (c.bot) parts.push(`боты ${c.bot}`);
+  if (c.tunnel) parts.push(`туннели ${c.tunnel}`);
+  if (c.observability) parts.push(`метрики ${c.observability}`);
+  if (c.other) parts.push(`прочее ${c.other}`);
+  return parts.join(" · ") || node.role;
+}
+
+function renderMap() {
+  const routeRows = (traffic?.routes || []).map(r => {
+    const val = r.gb_7d != null ? `${gb(Number(r.gb_7d))} · ${r.users_7d ?? 0} юз.` : kindRu(r.kind);
+    return `<div class="route ${r.kind === "inferred" ? "inferred" : ""}">
+      <div class="route-name">${esc(nodeRu(r.from))} → ${esc(nodeRu(r.to))} · ${esc(labelRu(r.label))}</div>
+      <div class="route-val">${esc(val)}</div>
+    </div>`;
+  }).join("");
+  return `<div class="map glass">
+    <div class="routes">${routeRows || `<div class="log-line">карта трафика загружается</div>`}</div>
+  </div>`;
+}
+
+function renderOverview() {
+  const online = nodes.filter(n => metrics[n.id]?.online).length;
+  const total = nodes.length || "-";
+  const danger = nodes.some(n => (metrics[n.id]?.disk?.pct ?? 0) >= 85);
+  const rows = nodes.map(node => {
+    const m = metrics[node.id];
+    const dot = !m ? "loading" : (m.online ? "online" : "offline");
+    const load = m?.online ? `${pct(m.cpu)} · ${pct(m.ram?.pct)} · ${pct(m.disk?.pct)}` : "-";
+    return `<button class="node-row glass" onclick="openNode('${node.id}')">
+      <span class="dot ${dot}"></span>
+      <span class="node-main">
+        <span class="node-name">${esc(node.name)}</span>
+        <span class="node-sub">${esc(nodeSub(node, m))}</span>
+      </span>
+      <span class="node-load">${esc(load)}</span>
+    </button>`;
+  }).join("");
+
+  $("overview").innerHTML = `
+    <div class="status">
+      <div><span class="count">${online}</span><span class="label"> / ${total} серверов онлайн</span></div>
+      <div class="updated" id="updated">${esc(stamp())}</div>
+    </div>
+    <div class="error" id="errorLine"></div>
+    <div class="alert glass ${danger ? "visible" : ""}">есть давление по диску; резерв чистим только отдельной подтверждённой фазой</div>
+    <div class="section">
+      <div class="section-head"><span class="section-title">трафик</span><button class="btn" onclick="copyFleetAudit()">копировать аудит</button></div>
+      ${renderMap()}
+    </div>
+    <div class="section">
+      <div class="section-head"><span class="section-title">серверы</span><span class="section-meta">нажми для деталей</span></div>
+      <div class="fleet">${rows || `<div class="log-line">загрузка</div>`}</div>
+    </div>
+    <div class="footer">
+      <span class="hint">root shell аудитится на сервере</span>
+      <button class="btn" onclick="refresh()">обновить</button>
+    </div>`;
+}
+
+function renderDetail(id) {
+  const node = nodes.find(n => n.id === id) || { id, name: id, role: "" };
+  const detail = details[id];
+  const m = detail?.metrics || metrics[id];
+  const probe = detail?.probe || {};
+  const containers = detail?.containers || [];
+  const services = (probe.services || []).map(s => `<div class="line">
+    <span class="dot ${s.state === "active" ? "online" : "offline"}"></span>
+    <span class="line-name">${esc(s.name)}</span>
+    <span class="line-load">${esc(s.state)}</span>
+  </div>`).join("");
+  const containerRows = containers.map(c => {
+    const load = [c.cpu != null ? c.cpu.toFixed(1) + "%" : "-", mem(c.mem_mib), c.pids != null ? c.pids + "p" : ""].filter(Boolean).join(" · ");
+    return `<div class="line">
+    <span class="dot ${c.running ? "online" : "offline"}"></span>
+    <span><span class="line-name">${esc(c.name)}</span><span class="line-sub">${esc(relationRu(c.relation || c.group))}</span></span>
+    <span class="line-load"><span>${esc(load)}</span><button class="btn" onclick="copyContainerAudit('${id}',${jsq(c.name)})">аудит</button></span>
+  </div>`;
+  }).join("");
+  const warnings = (probe.warnings || []).map(w => `<div class="log-line">${esc(w)}</div>`).join("");
+  const top = (probe.top_processes || []).map(p => `<div class="line">
+    <span class="dot online"></span>
+    <span class="line-name">${esc(p.name)}</span>
+    <span class="line-load">${esc(p.rss_kb)}kb · ${esc(p.mem)}%</span>
+  </div>`).join("");
+
+  $("detail").innerHTML = `
+    <div class="detail-title">
+      <h1>${esc(node.name)}</h1>
+      <p>${esc(roleRu(node.role))} · ${esc(probe.facts?.uptime || "загрузка деталей")}</p>
+    </div>
+    ${ringsFor(m)}
+    <div class="section">
+      <div class="section-head"><span class="section-title">сервисы</span><button class="btn" onclick="copyNodeAudit('${id}')">копировать аудит</button></div>
+      <div class="table glass">${services || `<div class="log-line">нет проверки сервисов</div>`}</div>
+    </div>
+    <div class="section">
+      <div class="section-head"><span class="section-title">контейнеры</span><span class="section-meta">${containers.length}</span></div>
+      <div class="table glass">${containerRows || `<div class="log-line">контейнеров нет</div>`}</div>
+    </div>
+    <div class="section">
+      <div class="section-head"><span class="section-title">процессы</span><span class="section-meta">rss</span></div>
+      <div class="table glass">${top || `<div class="log-line">нет проверки процессов</div>`}</div>
+    </div>
+    <div class="section">
+      <div class="section-head"><span class="section-title">предупреждения</span><span class="section-meta">последние</span></div>
+      <div class="logs">${warnings || `<div class="log-line">предупреждений нет</div>`}</div>
+    </div>
+    <div class="section">
+      <div class="section-head"><span class="section-title">root shell</span><span class="section-meta">аудит всегда</span></div>
+      <div class="shell glass">
+        <div class="shell-row">
+          <input class="shell-input" id="shellInput" autocomplete="off" spellcheck="false" placeholder="bash -lc на ${esc(node.name)}">
+          <button class="btn" id="shellBtn" onclick="runShell()">выполнить</button>
+        </div>
+        <pre class="output" id="shellOut">shell управляется INFRA_SHELL_ENABLED</pre>
+      </div>
+    </div>`;
+}
+
+function stamp() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, "0");
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+function metricText(m) {
+  if (!m || !m.online) return "нет телеметрии";
+  return [
+    `cpu ${pct(m.cpu)}`,
+    `ram ${pct(m.ram?.pct)} (${m.ram ? `${gb(m.ram.used_gb)}/${gb(m.ram.total_gb)}` : "-"})`,
+    `disk ${pct(m.disk?.pct)} (${m.disk ? `${gb(m.disk.avail_gb)} свободно` : "-"})`
+  ].join("; ");
+}
+
+function fleetAuditText() {
+  const lines = [`goida analytics audit`, `time: ${new Date().toISOString()}`, ""];
+  lines.push("servers:");
+  for (const n of nodes) lines.push(`- ${n.name} (${roleRu(n.role)}): ${metricText(metrics[n.id])}; ${nodeSub(n, metrics[n.id])}`);
+  lines.push("", "traffic:");
+  for (const r of traffic?.routes || []) {
+    const val = r.gb_7d != null ? `${gb(Number(r.gb_7d))}, users ${r.users_7d ?? 0}` : kindRu(r.kind);
+    lines.push(`- ${nodeRu(r.from)} -> ${nodeRu(r.to)}: ${labelRu(r.label)}; ${r.kind}; ${val}`);
+  }
+  if (traffic?.error) lines.push(`traffic_error: ${traffic.error}`);
+  return lines.join("\n");
+}
+
+function nodeAuditText(id) {
+  const node = nodes.find(n => n.id === id) || { id, name: id, role: "" };
+  const detail = details[id] || {};
+  const m = detail.metrics || metrics[id];
+  const probe = detail.probe || {};
+  const lines = [`goida node audit: ${node.name}`, `time: ${new Date().toISOString()}`, `role: ${roleRu(node.role)}`, `metrics: ${metricText(m)}`];
+  if (probe.facts) lines.push(`host: ${probe.facts.hostname || "-"}; ${probe.facts.uptime || "-"}`);
+  lines.push("", "services:");
+  for (const s of probe.services || []) lines.push(`- ${s.name}: ${s.state}`);
+  lines.push("", "containers:");
+  for (const c of detail.containers || []) lines.push(`- ${c.name}: ${relationRu(c.relation || c.group)}; cpu ${c.cpu ?? "-"}%; mem ${mem(c.mem_mib)}; pids ${c.pids ?? "-"}`);
+  lines.push("", "top:");
+  for (const p of probe.top_processes || []) lines.push(`- ${p.name}: rss ${p.rss_kb}kb; cpu ${p.cpu}%; mem ${p.mem}%`);
+  lines.push("", "warnings:");
+  for (const w of probe.warnings || []) lines.push(`- ${w}`);
+  return lines.join("\n");
+}
+
+function containerAuditText(id, name) {
+  const node = nodes.find(n => n.id === id) || { id, name: id, role: "" };
+  const detail = details[id] || {};
+  const c = (detail.containers || []).find(x => x.name === name);
+  if (!c) return `goida container audit\nnode: ${node.name}\ncontainer: ${name}\nnot found in current snapshot`;
+  return [
+    `goida container audit`,
+    `time: ${new Date().toISOString()}`,
+    `node: ${node.name} (${roleRu(node.role)})`,
+    `container: ${c.name}`,
+    `relation: ${relationRu(c.relation || c.group)}`,
+    `running: ${c.running}`,
+    `cpu: ${c.cpu ?? "-"}%`,
+    `mem: ${mem(c.mem_mib)}`,
+    `pids: ${c.pids ?? "-"}`,
+    `node_metrics: ${metricText(detail.metrics || metrics[id])}`
+  ].join("\n");
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    notify("аудит скопирован");
+  } catch {
+    notify("не удалось скопировать");
+  }
+}
+function notify(text) {
+  if (tg?.showAlert) tg.showAlert(text);
+  else window.alert(text);
+}
+function copyFleetAudit() { copyText(fleetAuditText()); }
+function copyNodeAudit(id) { copyText(nodeAuditText(id)); }
+function copyContainerAudit(id, name) { copyText(containerAuditText(id, name)); }
+
+async function openNode(id) {
+  selectedNode = id;
+  $("app").classList.add("detail-mode");
+  $("overview").classList.add("hidden");
+  $("detail").classList.remove("hidden");
+  renderDetail(id);
+  try {
+    details[id] = await get(`/api/node/${id}/detail`);
+  } catch (e) {
+    details[id] = { metrics: metrics[id], probe: { warnings: [e.message] }, containers: [] };
+  }
+  renderDetail(id);
+}
+
+function showOverview() {
+  selectedNode = "";
+  $("app").classList.remove("detail-mode");
+  $("detail").classList.add("hidden");
+  $("overview").classList.remove("hidden");
+  renderOverview();
+}
+
+async function loadMetric(node) {
+  try { metrics[node.id] = await get(`/api/node/${node.id}`); }
+  catch { metrics[node.id] = { online: false }; }
+  if (!selectedNode) renderOverview();
+}
+
+async function refresh() {
+  try {
+    const data = await get("/api/nodes");
+    nodes = data.nodes || [];
+    renderOverview();
+    await Promise.all([get("/api/traffic/routes").then(d => { traffic = d; }).catch(e => { traffic = { routes: [], error: e.message }; })]);
+    await Promise.all(nodes.map(loadMetric));
+    renderOverview();
+  } catch (e) {
+    $("overview").innerHTML = `<div class="error visible">${esc(e.message)}</div>`;
+  }
+}
+
+async function runShell() {
+  if (!selectedNode || busyShell) return;
+  const input = $("shellInput");
+  const out = $("shellOut");
+  const btn = $("shellBtn");
+  const command = input.value.trim();
+  if (!command) return;
+  busyShell = true;
+  btn.disabled = true;
+  out.textContent = `$ ${command}\nrunning...`;
+  try {
+    const r = await post(`/api/node/${selectedNode}/shell`, { command, timeout: 30 });
+    out.textContent = `$ ${command}\nexit ${r.exit_code} · ${r.duration_ms}ms${r.truncated ? " · truncated" : ""}\n\n${r.output || ""}`;
+  } catch (e) {
+    out.textContent = `$ ${command}\n${e.message}`;
+  } finally {
+    busyShell = false;
+    btn.disabled = false;
+  }
+}
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Enter" && document.activeElement?.id === "shellInput") runShell();
+});
+
+refresh();
+</script>
+</body>
+</html>
