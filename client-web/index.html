@@ -1,0 +1,1586 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <title>goida vpn</title>
+  <!-- font preload — eliminates FOUT, fonts arrive before first paint -->
+  <link rel="preload" href="/fonts/Inter-Regular.ttf" as="font" type="font/truetype" crossorigin>
+  <link rel="preload" href="/fonts/Inter-Medium.ttf" as="font" type="font/truetype" crossorigin>
+  <script src="/telegram-web-app.js"></script>
+  <script src="/qr.js"></script>
+  <style>
+    @font-face {
+      font-family: "Inter";
+      src: url("/fonts/Inter-Regular.ttf") format("truetype");
+      font-weight: 400; font-style: normal; font-display: block;
+    }
+    @font-face {
+      font-family: "Inter";
+      src: url("/fonts/Inter-Medium.ttf") format("truetype");
+      font-weight: 500; font-style: normal; font-display: block;
+    }
+
+    :root {
+      /* HIG type scale */
+      --t-title:    28px;
+      --t-section:  20px;
+      --t-headline: 17px;
+      --t-sub:      15px;
+      --t-caption:  13px;
+
+      /* HIG radii */
+      --r-card: 18px;
+      --r-btn:  14px;
+      --r-sm:   10px;
+      --r-pill: 999px;
+
+      /* Midnight Emerald — premium dark glass */
+      --c-ink:   #f6fff9;
+      --c-fg:    rgba(246,255,249,.94);
+      --c-fg2:   rgba(226,244,235,.66);
+      --c-fg3:   rgba(226,244,235,.42);
+      --c-sep:   rgba(255,255,255,.10);
+      --c-green: #30d19e;
+      --c-red:   #ff3b30;
+      --c-blue:  #4aa3ff;
+      --c-emerald: #30d19e;
+      --c-aqua: #4aa3ff;
+
+      /* real liquid-glass stack over the emerald mesh */
+      --card-bg:    rgba(255,255,255,.070);
+      --card-bg-em: rgba(255,255,255,.080);
+      --card-bd:    rgba(255,255,255,.125);
+      --card-sh:    0 10px 24px rgba(0,0,0,.20);
+      --gl-border:  rgba(255,255,255,.14);
+      --gl-blur:    blur(16px) saturate(1.45);
+
+      --ease: cubic-bezier(.2,.8,.2,1);
+      --dur:  .22s;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    * { font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif; letter-spacing: -0.04em; }
+
+    html, body { margin: 0; min-height: 100%; background: #03120d; color: var(--c-fg); }
+    body { overflow-x: hidden; font-weight: 400; font-size: var(--t-headline); line-height: 1.4; }
+
+    /* ── Midnight Emerald matte gradient: no grid, clean under glass ── */
+    #bg {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+      background:
+        radial-gradient(75% 58% at 16% 7%, rgba(54,210,158,.36), transparent 58%),
+        radial-gradient(62% 48% at 92% 28%, rgba(37,116,156,.30), transparent 62%),
+        radial-gradient(88% 64% at 46% 112%, rgba(23,126,92,.42), transparent 68%),
+        linear-gradient(158deg, #0b3a2f 0%, #06221b 46%, #020d0a 100%);
+    }
+    #bg::before {
+      content: ''; position: absolute; inset: -20%;
+      background:
+        radial-gradient(42% 34% at 18% 80%, rgba(48,209,158,.18), transparent 62%),
+        radial-gradient(38% 30% at 78% 12%, rgba(255,255,255,.055), transparent 68%),
+        linear-gradient(120deg, transparent 0 36%, rgba(255,255,255,.035) 49%, transparent 63%);
+      filter: blur(28px);
+      opacity: .85;
+    }
+    #bg::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(180deg, rgba(0,0,0,.03), rgba(0,0,0,.22));
+    }
+
+    button, input, textarea, select, a { font: inherit; letter-spacing: inherit; color: inherit; background: none; border: none; }
+
+    .app {
+      position: relative; z-index: 1;
+      width: min(100%, 640px); min-height: 100vh; margin: 0 auto;
+      padding: calc(16px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));
+      display: grid; align-content: start; gap: 12px;
+    }
+    .brand { display: grid; justify-items: center; padding: 12px 0 18px; }
+    .logo { width: min(168px, 48vw); height: auto; display: block; filter: invert(1) drop-shadow(0 8px 22px rgba(0,0,0,.24)); }
+
+    /* ── clean glass card: no decorative glare/gradients ── */
+    .card {
+      position: relative; isolation: isolate;
+      border-radius: var(--r-card); padding: 18px 20px;
+      background: var(--card-bg);
+      backdrop-filter: blur(24px) saturate(1.18);
+      -webkit-backdrop-filter: blur(24px) saturate(1.18);
+      border: 1px solid var(--card-bd);
+      box-shadow: var(--card-sh);
+      overflow: hidden; contain: layout; transform: translateZ(0);
+      -webkit-mask-image: -webkit-radial-gradient(white, black);
+    }
+    .card::before, .card::after { content: none; }
+    .card > * { position: relative; z-index: 1; }
+    .card.em {
+      background: var(--card-bg-em);
+      box-shadow: var(--card-sh);
+    }
+    .loading-card {
+      min-height: min(360px, 48vh);
+      display: grid;
+      place-items: center;
+      gap: 18px;
+      text-align: center;
+    }
+    .loader-lens {
+      position: relative;
+      width: 104px;
+      height: 52px;
+      border-radius: var(--r-pill);
+      overflow: hidden;
+      background: rgba(255,255,255,.105);
+      border: 1px solid rgba(255,255,255,.20);
+      box-shadow: 0 10px 24px rgba(0,0,0,.20);
+      backdrop-filter: blur(12px) saturate(1.3);
+      -webkit-backdrop-filter: blur(12px) saturate(1.3);
+    }
+    .loader-lens::before {
+      content: '';
+      position: absolute;
+      inset: 6px;
+      border-radius: inherit;
+      background: rgba(48,209,158,.28);
+      filter: url(#goo);
+      transform: translate3d(-42px,0,0);
+      animation: loaderBlob 1.15s var(--ease) infinite alternate;
+    }
+    .loader-lens::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(100deg, transparent 18%, rgba(255,255,255,.45) 45%, transparent 72%);
+      transform: translate3d(-115%,0,0);
+      animation: sliderShine 1.55s var(--ease) infinite;
+      opacity: .72;
+    }
+    .loader-title { display: grid; gap: 5px; }
+    .loader-title strong { font-size: var(--t-section); font-weight: 500; line-height: 1.15; }
+    .loader-title span { color: var(--c-fg2); font-size: var(--t-caption); line-height: 1.35; }
+    .loader-bar {
+      width: min(220px, 72vw);
+      height: 5px;
+      border-radius: var(--r-pill);
+      overflow: hidden;
+      background: rgba(255,255,255,.12);
+    }
+    .loader-bar::before {
+      content: '';
+      display: block;
+      width: 46%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, rgba(255,255,255,.42), rgba(48,209,158,.78), rgba(255,255,255,.30));
+      animation: loaderTrack 1.25s var(--ease) infinite;
+    }
+    @keyframes loaderBlob {
+      from { transform: translate3d(-42px,0,0) scaleX(.82); }
+      to   { transform: translate3d(42px,0,0) scaleX(1.12); }
+    }
+    @keyframes loaderTrack {
+      from { transform: translate3d(-110%,0,0); }
+      to   { transform: translate3d(240%,0,0); }
+    }
+
+    /* ── nav (glass segmented control) ── */
+    .segments {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
+      padding: 4px; border-radius: calc(var(--r-card) + 4px);
+      position: sticky; top: 8px; z-index: 4;
+      overflow: hidden; contain: layout; isolation: isolate;
+      background: var(--card-bg);
+      backdrop-filter: blur(24px) saturate(1.18);
+      -webkit-backdrop-filter: blur(24px) saturate(1.18);
+      border: 1px solid var(--card-bd);
+      box-shadow: var(--card-sh);
+      transform: translateZ(0);
+      -webkit-mask-image: -webkit-radial-gradient(white, black);
+    }
+    .segments button {
+      min-height: 44px; border-radius: var(--r-card); background: transparent;
+      color: var(--c-fg2); cursor: pointer; font-weight: 500; font-size: var(--t-sub);
+      transition: color .25s var(--ease), background .25s var(--ease), box-shadow .25s var(--ease);
+    }
+    .segments button.active {
+      background: rgba(255,255,255,.115); color: var(--c-ink);
+      box-shadow: none;
+    }
+
+    /* ── panels — smooth directional slide (swipe feel) ── */
+    .panel { display: none; gap: 12px; }
+    .panel.active { display: grid; animation: panelIn .34s cubic-bezier(.22,.8,.28,1) both; }
+    @keyframes panelIn {
+      from { opacity: 0; transform: translate3d(var(--dx,24px),0,0); }
+      to   { opacity: 1; transform: translate3d(0,0,0); }
+    }
+
+    /* ── typography ── */
+    h1, h2, h3, p { margin: 0; }
+    h2 { font-size: var(--t-section); font-weight: 500; line-height: 1.2; }
+    h3 { font-size: var(--t-headline); font-weight: 500; line-height: 1.3; }
+    .muted { color: var(--c-fg2); }
+    .status { color: var(--c-green); font-weight: 500; }
+
+    .key-username { font-size: var(--t-title); font-weight: 500; line-height: 1.1; margin-top: 6px; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .sub-status {
+      margin-top: 12px; padding: 10px 12px; border-radius: var(--r-btn);
+      background: rgba(0,0,0,.13); border: 1px solid var(--gl-border);
+      color: var(--c-fg2); font-size: var(--t-sub); line-height: 1.35;
+    }
+    .sub-status strong { color: var(--c-ink); font-weight: 500; }
+    .sub-status.warn strong { color: #ffe0a3; }
+    .sub-status.bad strong { color: #ffb6b3; }
+
+    .pill {
+      display: inline-block; border-radius: var(--r-pill); padding: 5px 10px;
+      background: rgba(255,255,255,.070); border: 1px solid var(--gl-border);
+      font-size: var(--t-caption); font-weight: 500; line-height: 1.1; white-space: nowrap;
+      box-shadow: none;
+    }
+    .pill.pill-ok    { background: rgba(48,209,158,.16); border-color: rgba(48,209,158,.24); color: #bfffea; }
+    .pill.pill-warn  { background: rgba(255,255,255,.075); border-color: var(--gl-border); color: var(--c-fg2); }
+    .pill.pill-bad   { background: rgba(255,59,48,.14); border-color: rgba(255,59,48,.22); color: #ffb6b3; }
+
+    .qr-wrap { display: grid; justify-items: center; padding: 12px; margin-top: 14px; border-radius: var(--r-btn); background: rgba(255,255,255,.92); }
+    .qr-wrap svg { display: block; width: 100%; height: auto; max-width: 200px; }
+
+    .invite-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; padding: 12px 0; }
+    .invite-row + .invite-row { border-top: 1px solid var(--c-sep); }
+    .invite-row:first-child { padding-top: 0; }
+    .invite-row:last-child { padding-bottom: 0; }
+    .invite-name { font-size: var(--t-sub); font-weight: 500; }
+    .invite-meta { font-size: var(--t-caption); color: var(--c-fg2); margin-top: 2px; }
+    .invite-stat { font-size: var(--t-section); font-weight: 500; margin-top: 4px; }
+    .sheet-field { display: grid; gap: 6px; }
+    .sheet-field-label { font-size: var(--t-caption); color: var(--c-fg2); }
+
+    .urlbox {
+      display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center;
+      margin-top: 14px; padding: 4px 4px 4px 7px;
+      border-radius: var(--r-btn);
+      background: rgba(0,0,0,.14); border: 1px solid rgba(255,255,255,.12);
+      box-shadow: none;
+    }
+    .urlbox input { border: none; outline: none; background: transparent; color: var(--c-fg2); min-width: 0; font-size: var(--t-sub); }
+
+    .icon-btn {
+      width: 36px; height: 36px; border-radius: var(--r-sm); flex-shrink: 0;
+      background: rgba(255,255,255,.075); border: 1px solid rgba(255,255,255,.14);
+      color: var(--c-ink); display: grid; place-items: center; cursor: pointer;
+      box-shadow: none; transition: color var(--dur) var(--ease), background var(--dur) var(--ease), transform var(--dur) var(--ease);
+    }
+    .icon-btn.done { color: #bfffea; background: rgba(48,209,158,.16); transform: scale(.96); }
+    .icon-btn svg { width: 18px; height: 18px; }
+    .link-btn { background: transparent; color: var(--c-fg2); font-size: var(--t-caption); font-weight: 500; cursor: pointer; padding: 4px 0; display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; white-space: nowrap; }
+    .link-btn .x { font-size: 14px; line-height: 1; color: var(--c-ink); opacity: .84; transform: translateY(-.5px); }
+
+    .btn {
+      border-radius: var(--r-btn); min-height: 48px; padding: 0 20px;
+      background: rgba(255,255,255,.10); color: var(--c-ink);
+      font-weight: 500; font-size: var(--t-sub); line-height: 1;
+      cursor: pointer; text-decoration: none;
+      display: inline-flex; align-items: center; justify-content: center;
+      border: 1px solid rgba(255,255,255,.22);
+      box-shadow: 0 6px 16px rgba(0,0,0,.18);
+      backdrop-filter: blur(10px) saturate(1.35);
+      -webkit-backdrop-filter: blur(10px) saturate(1.35);
+      transition: transform var(--dur) var(--ease), opacity var(--dur) var(--ease);
+    }
+    .btn:active { transform: scale(.97); }
+    .btn.ghost {
+      background: rgba(255,255,255,.070); color: var(--c-ink);
+      backdrop-filter: var(--gl-blur); -webkit-backdrop-filter: var(--gl-blur);
+      border: 1px solid var(--card-bd); box-shadow: none;
+    }
+    .btn.danger { background: var(--c-red); color: #fff; box-shadow: 0 6px 18px rgba(255,59,48,.28); }
+    .btn:disabled { opacity: .4; cursor: default; transform: none !important; }
+    .btn-full { width: 100%; }
+
+    .payment-date-val { font-size: var(--t-section); font-weight: 500; margin-top: 6px; }
+    .pay-toggle { display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: center; padding-top: 14px; border-top: 1px solid var(--c-sep); margin-top: 14px; }
+    .pay-toggle-desc { margin-top: 3px; color: var(--c-fg2); font-size: var(--t-caption); line-height: 1.4; }
+
+    .plan-stage { display: grid; justify-items: center; gap: 4px; text-align: center; margin-bottom: 18px; }
+    .plan-num {
+      width: 96px; height: 80px; border-radius: 22px; display: grid; place-items: center;
+      font-size: 56px; font-weight: 500; line-height: 1;
+      color: var(--c-fg2);
+      background: rgba(255,255,255,.070); border: 1px solid var(--card-bd);
+      box-shadow: none;
+      transition: transform var(--dur) var(--ease), color var(--dur) var(--ease);
+    }
+    .plan-num.pop { transform: scale(1.04) translate3d(0,-2px,0); color: var(--c-ink); }
+    .plan-price-label { font-size: var(--t-sub); color: var(--c-fg2); }
+    .plan-price-val   { font-size: var(--t-section); font-weight: 500; margin-top: 2px; color: var(--c-ink); }
+
+    .slider-wrap { display: grid; gap: 10px; margin-bottom: 18px; }
+    .slider { position: relative; height: 48px; touch-action: none; cursor: pointer; }
+    .s-track, .s-fill { position: absolute; left: 0; right: 0; top: 21px; height: 5px; border-radius: var(--r-pill); }
+    .s-track { background: rgba(226,244,235,.15); box-shadow: none; }
+    .s-fill {
+      right: auto; width: var(--fill,0%);
+      background: linear-gradient(90deg, rgba(48,209,158,.54), rgba(48,209,158,.92));
+      box-shadow: none;
+    }
+    .s-thumb {
+      --thumb-w: 34px;
+      position: absolute; top: 7px;
+      left: var(--thumb-pos, calc(var(--thumb-w) / 2));
+      width: var(--thumb-w); height: 34px; border-radius: 50%;
+      background: #dff8ee;
+      transform: translate3d(-50%,0,0);
+      box-shadow: 0 4px 10px rgba(0,0,0,.22);
+      border: 1px solid rgba(255,255,255,.28);
+      transition: left .16s var(--ease), background-color .16s var(--ease);
+      will-change: left; overflow: visible;
+    }
+    .slider.dragging .s-thumb {
+      transform: translate3d(-50%,0,0);
+      transition: none;
+      background: #f2fff8;
+    }
+    @keyframes sliderShine {
+      0%, 48% { transform: translate3d(-120%,0,0); }
+      72%, 100% { transform: translate3d(120%,0,0); }
+    }
+    .s-ticks { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; }
+    .s-tick {
+      min-height: 34px; border-radius: var(--r-sm);
+      background: rgba(255,255,255,.075); border: 1px solid rgba(255,255,255,.08);
+      color: var(--c-fg2); font-weight: 500; font-size: var(--t-sub); cursor: pointer;
+      transition: background var(--dur), color var(--dur);
+    }
+    .s-tick.active { background: rgba(48,209,158,.24); color: var(--c-ink); box-shadow: none; }
+
+    .price-notice {
+      display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center;
+      padding: 12px 14px; border-radius: var(--r-btn);
+      background: rgba(0,0,0,.16); border: 1px solid var(--gl-border);
+      max-height: 120px; overflow: hidden; margin-bottom: 16px;
+      transition: max-height var(--dur) var(--ease), margin var(--dur) var(--ease),
+                  padding var(--dur) var(--ease), border-color var(--dur),
+                  opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
+      opacity: 1; transform: translate3d(0,0,0);
+    }
+    .price-notice.hidden { max-height: 0; margin-bottom: 0; padding: 0 14px; border-color: transparent; opacity: 0; transform: translate3d(0,6px,0); pointer-events: none; }
+    .price-badge { padding: 5px 10px; border-radius: var(--r-pill); background: rgba(48,209,158,.16); border: 1px solid rgba(48,209,158,.24); color: #bfffea; font-size: var(--t-caption); font-weight: 500; white-space: nowrap; }
+    .plan-pending { margin-bottom: 12px; }
+
+    .device { display: grid; grid-template-columns: 44px 1fr auto; gap: 12px; align-items: center; }
+    .device + .device { margin-top: 12px; }
+    .dev-icon { width: 44px; height: 44px; border-radius: var(--r-sm); background: rgba(255,255,255,.07); border: 1px solid var(--gl-border); display: grid; place-items: center; font-size: var(--t-headline); font-weight: 500; box-shadow: none; }
+    .dev-name { font-size: var(--t-sub); font-weight: 500; line-height: 1.3; }
+    .dev-meta { font-size: var(--t-caption); color: var(--c-fg2); line-height: 1.4; margin-top: 2px; }
+    .add-dev-btn { min-height: 44px; border-radius: var(--r-btn); border: 1.5px dashed rgba(255,255,255,.22); background: rgba(255,255,255,.04); color: var(--c-fg2); display: flex; align-items: center; justify-content: center; gap: 7px; font-size: var(--t-sub); font-weight: 500; cursor: pointer; }
+    .add-dev-btn svg { width: 16px; height: 16px; }
+
+    .dl-card { display: grid; gap: 0; transition: gap .32s var(--ease); }
+    .dl-card.open { gap: 14px; }
+    .dl-head { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; background: transparent; padding: 0; text-align: left; cursor: pointer; }
+    .dl-chevron { width: 32px; height: 32px; border-radius: var(--r-pill); display: grid; place-items: center; background: rgba(255,255,255,.07); border: 1px solid var(--gl-border); flex-shrink: 0; }
+    .dl-chevron svg { width: 17px; height: 17px; transition: transform var(--dur) var(--ease); }
+    .dl-card.open .dl-chevron svg { transform: rotate(180deg); }
+    .dl-body {
+      display: grid; gap: 12px; overflow: hidden;
+      max-height: 0; opacity: 0; transform: translate3d(0,-5px,0);
+      transition: max-height .34s var(--ease), opacity .24s var(--ease), transform .34s var(--ease);
+      will-change: max-height, opacity, transform;
+    }
+    .dl-body.show { max-height: var(--dl-h, 760px); opacity: 1; transform: translate3d(0,0,0); }
+    .dl-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .dl-tabs button { min-height: 40px; border-radius: var(--r-sm); background: rgba(255,255,255,.065); border: 1px solid rgba(255,255,255,.08); color: var(--c-fg2); font-size: var(--t-caption); font-weight: 400; cursor: pointer; transition: background var(--dur), color var(--dur); }
+    .dl-tabs button.active { background: rgba(48,209,158,.22); color: var(--c-ink); }
+    .dl-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .dl-actions a { min-height: 44px; border-radius: var(--r-btn); background: rgba(255,255,255,.10); color: var(--c-ink); text-decoration: none; display: flex; align-items: center; justify-content: center; font-size: var(--t-sub); border: 1px solid rgba(255,255,255,.16); box-shadow: none; }
+
+    .srv-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; padding: 13px 0; }
+    .srv-body { display: block; }
+    .srv-body > p { margin-bottom: 12px; }
+    .srv-row + .srv-row { border-top: 1px solid var(--c-sep); }
+    .srv-row:last-child { padding-bottom: 0; }
+    .srv-row.srv-extra {
+      overflow: hidden;
+      max-height: 140px;
+      opacity: 1;
+      transform: translate3d(0,0,0);
+      transition: max-height .34s var(--ease), padding .34s var(--ease),
+                  border-color .34s var(--ease), opacity .22s var(--ease),
+                  transform .34s var(--ease);
+      will-change: max-height, opacity, transform;
+    }
+    .srv-row.srv-extra.hidden {
+      max-height: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+      border-color: transparent;
+      opacity: 0;
+      transform: translate3d(0,-5px,0);
+      pointer-events: none;
+    }
+    .srv-name { font-size: var(--t-sub); font-weight: 500; }
+    .srv-desc  { font-size: var(--t-caption); color: var(--c-fg2); margin-top: 2px; }
+    .info-note { font-size: var(--t-sub); color: var(--c-fg2); line-height: 1.45; }
+    .invite-dev {
+      min-height: 164px; display: grid; place-items: center; gap: 12px;
+      padding: 18px 0 4px; text-align: center; color: var(--c-fg2);
+    }
+    .notice {
+      display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center;
+      color: var(--c-fg2);
+      font-size: var(--t-sub); line-height: 1.35;
+    }
+    .notice strong { color: var(--c-ink); font-weight: 500; }
+    .notice-close {
+      width: 32px; height: 32px; border-radius: var(--r-sm);
+      display: grid; place-items: center; background: rgba(255,255,255,.065);
+      border: 1px solid rgba(255,255,255,.10); color: var(--c-ink);
+      cursor: pointer; font-size: 18px; line-height: 1;
+    }
+    .pixel-scene {
+      position: relative; width: 156px; height: 82px; display: block;
+      color: var(--c-ink); opacity: .9; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 22px; line-height: 1; letter-spacing: 0;
+    }
+    .px-person {
+      position: absolute; bottom: 14px; width: 34px; height: 42px;
+      display: grid; place-items: center; white-space: pre; filter: drop-shadow(0 5px 10px rgba(0,0,0,.18));
+      animation: pxBob 1.2s steps(2,end) infinite;
+    }
+    .px-a { left: 22px; }
+    .px-b { right: 22px; animation-delay: .32s; transform: scaleX(-1); }
+    .px-link {
+      position: absolute; left: 60px; top: 27px; width: 36px; overflow: hidden;
+      white-space: nowrap; color: var(--c-ink); opacity: .74;
+      animation: pxDots 1.1s steps(4,end) infinite;
+    }
+    .px-floor {
+      position: absolute; left: 18px; right: 18px; bottom: 8px; height: 1px;
+      background: rgba(246,255,249,.22);
+    }
+    @keyframes pxBob {
+      0%,100% { translate: 0 0; }
+      50% { translate: 0 -5px; }
+    }
+    @keyframes pxDots {
+      from { width: 8px; }
+      to { width: 44px; }
+    }
+
+    .switch { position: relative; width: 51px; height: 31px; flex-shrink: 0; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .knob {
+      position: absolute; inset: 0; border-radius: var(--r-pill);
+      background: rgba(255,255,255,.11);
+      border: 1px solid rgba(255,255,255,.18);
+      box-shadow: none;
+      overflow: hidden; transition: background var(--dur) var(--ease), box-shadow var(--dur) var(--ease); cursor: pointer;
+    }
+    .knob-fill {
+      position: absolute; inset: 3px; width: 25px; height: 25px; border-radius: var(--r-pill);
+      background: rgba(48,209,158,.50);
+      filter: url(#goo);
+      transform: translate3d(0,0,0);
+      transition: width .28s var(--ease), transform .28s var(--ease), background .22s var(--ease);
+    }
+    .knob-thumb {
+      position: absolute; width: 25px; height: 25px; left: 3px; top: 2px; border-radius: 50%;
+      background: rgba(245,255,250,.86);
+      box-shadow: 0 3px 8px rgba(0,0,0,.22);
+      transition: transform .28s var(--ease), scale .22s var(--ease);
+    }
+    .knob::after {
+      content: ''; position: absolute; inset: 3px; border-radius: inherit;
+      display: none;
+    }
+    .switch:active .knob-thumb { scale: 1.15 .9; }
+    .switch:active .knob-fill { width: 34px; }
+    .switch input:checked + .knob {
+      background: rgba(48,209,158,.24);
+      box-shadow: none;
+    }
+    .switch input:checked + .knob .knob-fill { width: 45px; transform: translate3d(0,0,0); }
+    .switch input:checked + .knob .knob-thumb { transform: translate3d(20px,0,0); }
+
+    .sheet {
+      position: fixed; inset: 0; display: flex; align-items: flex-end;
+      background: rgba(0,0,0,.42); z-index: 20;
+      visibility: hidden; pointer-events: none;
+      transition: visibility 0s linear .28s;
+    }
+    .sheet.show { visibility: visible; pointer-events: auto; transition-delay: 0s; }
+    .sheet-inner {
+      width: 100%; max-width: 640px; margin: 0 auto;
+      border-radius: 22px 22px 0 0;
+      background: rgba(255,255,255,.08);
+      backdrop-filter: blur(30px) saturate(1.18); -webkit-backdrop-filter: blur(30px) saturate(1.18);
+      border-top: 1px solid rgba(255,255,255,.16);
+      box-shadow: 0 -10px 28px rgba(0,0,0,.24);
+      color: var(--c-ink); padding: 18px 20px 20px; display: grid; gap: 12px;
+      transform: translate3d(0,110%,0); opacity: 1;
+      transition: transform .28s var(--ease);
+    }
+    .sheet.show .sheet-inner { transform: translate3d(0,0,0); }
+    .handle { width: 36px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.24); justify-self: center; margin-bottom: 2px; }
+    #sh-title { font-size: var(--t-section); line-height: 1.18; font-weight: 500; }
+    .sheet-text { color: var(--c-fg2); font-size: var(--t-sub); line-height: 1.5; }
+    #sh-btns { gap: 10px; margin-top: 2px; }
+
+    .empty, .error { text-align: center; padding: 40px 20px; color: var(--c-fg2); overflow-wrap: anywhere; }
+    .loading { min-height: 100vh; display: grid; place-items: center; color: var(--c-fg2); font-size: var(--t-sub); }
+
+    /* ── launch splash: fullscreen emerald object dissolves through turbulence ── */
+    #splash {
+      position: fixed; inset: 0; z-index: 200; overflow: hidden;
+      background:
+        radial-gradient(64% 58% at 50% 44%, rgba(48,209,158,.46), transparent 60%),
+        radial-gradient(70% 62% at 58% 110%, rgba(18,120,92,.58), transparent 68%),
+        linear-gradient(160deg, #062a22, #03120d);
+      display: grid; place-items: center;
+      transition: opacity .55s ease;
+    }
+    #splash.hide { opacity: 0; pointer-events: none; }
+
+    .sp-field {
+      position: absolute; inset: -18%; z-index: 1;
+      background:
+        radial-gradient(60% 44% at 24% 14%, rgba(88,232,180,.54), transparent 62%),
+        radial-gradient(50% 38% at 84% 28%, rgba(62,154,190,.34), transparent 64%),
+        radial-gradient(88% 68% at 50% 106%, rgba(18,126,92,.66), transparent 70%),
+        linear-gradient(160deg, #0b3a2f, #03120d);
+      filter: url(#splash-dissolve);
+      transform-origin: 50% 50%;
+      animation: spBreathe 1.8s ease-in-out infinite alternate;
+      will-change: opacity, transform, filter;
+    }
+    .sp-field::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, transparent 18%, rgba(255,255,255,.16) 48%, transparent 68%);
+      opacity: 0; animation: spSpecular 1.9s ease-in-out infinite;
+    }
+    .sp-field::before {
+      content: ''; position: absolute; inset: 0;
+      background:
+        radial-gradient(circle at 18% 20%, rgba(255,255,255,.22) 0 1px, transparent 2px),
+        radial-gradient(circle at 74% 18%, rgba(255,255,255,.16) 0 1px, transparent 2px),
+        radial-gradient(circle at 64% 72%, rgba(48,209,158,.24) 0 1px, transparent 2px),
+        radial-gradient(circle at 34% 84%, rgba(255,255,255,.14) 0 1px, transparent 2px);
+      background-size: 82px 82px, 104px 104px, 126px 126px, 94px 94px;
+      filter: blur(.4px);
+      opacity: 0;
+      animation: spDust 2.2s ease-in-out infinite;
+    }
+    .sp-word {
+      --sp-y: clamp(-128px, -11vh, -78px);
+      position: relative; z-index: 3; text-align: center;
+      opacity: 1; transform: translateY(var(--sp-y)) scale(1);
+      animation: spWord 1.8s ease-in-out infinite alternate;
+    }
+    .sp-word img {
+      width: 210px; max-width: 58vw; height: auto; display: block; margin: 0 auto;
+      filter: invert(1) drop-shadow(0 12px 26px rgba(0,0,0,.32));
+    }
+    @keyframes spBreathe {
+      0%   { opacity: .94; transform: scale(1.02); filter: url(#splash-dissolve); }
+      100% { opacity: 1; transform: scale(1.08); filter: url(#splash-dissolve); }
+    }
+    @keyframes spSpecular {
+      0%,26% { opacity: 0; transform: translate3d(-18%,0,0); }
+      48%    { opacity: .58; }
+      78%,100% { opacity: 0; transform: translate3d(18%,0,0); }
+    }
+    @keyframes spDust {
+      0%,38% { opacity: 0; transform: scale(.98); }
+      58%    { opacity: .46; }
+      100%   { opacity: 0; transform: scale(1.08); }
+    }
+    @keyframes spWord {
+      0%   { opacity: .86; transform: translateY(calc(var(--sp-y) + 1px)) scale(.995); }
+      100% { opacity: 1; transform: translateY(calc(var(--sp-y) - 1px)) scale(1.015); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .sp-field { display: none; }
+      .sp-word { animation: none; opacity: 1; }
+      .panel { animation: none; }
+    }
+
+    @media (max-width: 480px) {
+      .app { padding-left: 14px; padding-right: 14px; gap: 10px; }
+      .card { padding: 16px; }
+      .grid2 { grid-template-columns: 1fr; }
+      .key-username { font-size: 24px; }
+      .plan-num { width: 88px; height: 74px; font-size: 50px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="bg" aria-hidden="true"></div>
+  <div id="splash" aria-hidden="true">
+    <div class="sp-field"></div>
+    <div class="sp-word">
+      <img src="/goida.svg" alt="goida">
+    </div>
+  </div>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <filter id="glass-distortion" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+        <feTurbulence type="fractalNoise" baseFrequency="0.008 0.012" numOctaves="2" seed="7" result="noise"/>
+        <feGaussianBlur in="noise" stdDeviation="2.2" result="blurred"/>
+        <feDisplacementMap in="SourceGraphic" in2="blurred" scale="62" xChannelSelector="R" yChannelSelector="G"/>
+      </filter>
+      <filter id="splash-dissolve" x="-25%" y="-25%" width="150%" height="150%" color-interpolation-filters="sRGB">
+        <feTurbulence type="fractalNoise" baseFrequency="0.016 0.028" numOctaves="3" seed="12" result="noise">
+          <animate attributeName="baseFrequency" dur=".85s" values="0.010 0.016;0.032 0.058;0.078 0.118" fill="freeze"/>
+        </feTurbulence>
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="0" xChannelSelector="R" yChannelSelector="G">
+          <animate attributeName="scale" dur=".85s" values="0;22;86" fill="freeze"/>
+        </feDisplacementMap>
+      </filter>
+      <filter id="goo">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur"/>
+        <feColorMatrix in="blur" mode="matrix" values="
+          1 0 0 0 0
+          0 1 0 0 0
+          0 0 1 0 0
+          0 0 0 12 -7" result="goo"/>
+        <feComposite in="SourceGraphic" in2="goo" operator="atop"/>
+      </filter>
+    </defs>
+  </svg>
+  <div id="root" class="app">
+    <section class="brand"><img class="logo" src="/goida.svg" alt="goida vpn"></section>
+    <article class="card loading-card" aria-live="polite">
+      <div class="loader-lens" aria-hidden="true"></div>
+      <div class="loader-title">
+        <strong>загружаем приложение</strong>
+        <span>готовим шрифты, стекло и данные ключа</span>
+      </div>
+      <div class="loader-bar" aria-hidden="true"></div>
+    </article>
+  </div>
+  <div id="sheet" class="sheet">
+    <div class="sheet-inner">
+      <div class="handle"></div>
+      <h3 id="sh-title"></h3>
+      <p id="sh-text" class="sheet-text"></p>
+      <div id="sh-btns" class="grid2"></div>
+    </div>
+  </div>
+  <script>
+  'use strict';
+  const tg = window.Telegram?.WebApp;
+  if (tg) { tg.ready(); tg.expand(); }
+
+  /* ── state ── */
+  let state = null;
+  let activeTab  = 'key';
+  let prevTab    = 'key';
+  let desired    = 2;         /* desired device limit for plan card */
+  let dlPlatform = 'ios';
+  let dlOpen  = ls('dlOpen')  === '1';
+  let devOpen = ls('devOpen') === '1';
+  let srvOpen = ls('srvOpen') === '1';
+  let srvAll  = ls('srvAll')  === '1';
+
+  const TAB_IDS = { key: 'p-key', payment: 'p-pay', invites: 'p-srv' };
+  const TAB_ORDER = ['key', 'payment', 'invites'];
+
+  const DL = {
+    ios:       [['AppStore [ru]','https://apps.apple.com/ru/app/happ-proxy-utility-plus/id6746188973'],['AppStore [global]','https://apps.apple.com/us/app/happ-proxy-utility/id6504287215']],
+    android:   [['Google Play','https://play.google.com/store/apps/details?id=com.happproxy'],['APK','https://github.com/Happ-proxy/happ-android/releases/latest']],
+    windows:   [['GitHub Releases','https://github.com/Happ-proxy/happ-desktop/releases/latest']],
+    macos:     [['AppStore [ru]','https://apps.apple.com/ru/app/happ-proxy-utility-plus/id6746188973'],['DMG','https://github.com/Happ-proxy/happ-desktop/releases/latest']],
+    appletv:   [['App Store','https://apps.apple.com/us/app/happ-proxy-utility-for-tv/id6748297274']],
+    androidtv: [['Google Play','https://play.google.com/store/apps/details?id=com.happproxy']]
+  };
+  const DL_LABELS = [['ios','iOS'],['android','Android'],['windows','Windows'],['macos','macOS'],['appletv','Apple TV'],['androidtv','Android TV']];
+  const CORE_KEYS = new Set(['smart','smart-lite','reserve','fi','fin','fra','fr','se','swe','zapret','ru-zapret']);
+  const SRV_MAP = { smart:'Оптимальный 🇸🇨', 'smart-lite':'Оптимальный Лайт 🇸🇨', smart2:'Оптимальный 2 🇸🇨', reserve:'Резервный 🇰🇵 (мобильная связь)', fi:'Финляндия 🇫🇮', fin:'Финляндия 🇫🇮', FI:'Финляндия 🇫🇮', fra:'Франция 🇫🇷', fr:'Франция 🇫🇷', FR:'Франция 🇫🇷', se:'Швеция 🇸🇪', swe:'Швеция 🇸🇪', SE:'Швеция 🇸🇪', zapret:'Русский (YouTube, Discord) 🇷🇺', 'ru-zapret':'Русский (YouTube, Discord) 🇷🇺', 'RU-zapret':'Русский (YouTube, Discord) 🇷🇺', 'hydra:usa':'США 🇺🇸 (сторонний)', 'hydra:pol':'Польша 🇵🇱 (сторонний)', 'hydra:tur':'Турция 🇹🇷 (сторонний)', 'hydra:nl':'Нидерланды 🇳🇱 (сторонний)', 'hydra:de':'Германия 🇩🇪 (сторонний)' };
+
+  /* ── utils ── */
+  function ls(k, v) {
+    const key = 'goida:' + k;
+    try {
+      if (v === undefined) return localStorage.getItem(key) || sessionStorage.getItem(key) || '';
+      localStorage.setItem(key, v);
+    } catch { try { sessionStorage.setItem(key, v || ''); } catch {} }
+  }
+  function idata() { return tg?.initData || ''; }
+  function rub(v)  { return v + '₽'; }
+  function dayWord(n) {
+    n = Math.abs(+n);
+    if (n%10===1 && n%100!==11) return 'день';
+    if (n%10>=2 && n%10<=4 && !(n%100>=12&&n%100<=14)) return 'дня';
+    return 'дней';
+  }
+  function devWord(n) {
+    n = Math.abs(+n);
+    if (n%10===1 && n%100!==11) return 'устройство';
+    if (n%10>=2 && n%10<=4 && !(n%100>=12&&n%100<=14)) return 'устройства';
+    return 'устройств';
+  }
+  /* esc — fixed: & is a string key, not a template literal */
+  function esc(s) {
+    return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+  const ea = esc;
+  function ej(s) { return String(s ?? '').replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+
+  async function api(path, opts = {}) {
+    const r = await fetch(path, { ...opts, headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': idata(), ...(opts.headers||{}) }});
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'ошибка');
+    return d;
+  }
+
+  function preloadImage(src) {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = img.onerror = resolve;
+      img.src = src;
+    });
+  }
+  const criticalWarmup = Promise.allSettled([
+    document.fonts?.load('400 16px Inter') || Promise.resolve(),
+    document.fonts?.load('500 16px Inter') || Promise.resolve(),
+    document.fonts?.ready || Promise.resolve(),
+    preloadImage('/goida.svg'),
+    preloadImage('/splash-icon.svg'),
+    fetch('/telegram-web-app.js', { cache: 'force-cache' }).catch(() => null)
+  ]);
+  criticalWarmup.then(() => { assetsReady = true; maybeReveal(); });
+
+  /* ── initial load ── */
+  async function load() {
+    if (!tg || !idata()) { renderError('это приложение открывается только внутри Telegram'); appReady = true; maybeReveal(); return; }
+    try {
+      [state] = await Promise.all([api('/api/me'), criticalWarmup]);
+      desired = state.deviceLimit;
+      dlPlatform = guessPlatform();
+      render();
+      reportDeviceModel();
+    } catch(e) {
+      renderError(e.message === 'telegram account is not linked'
+        ? 'твой Telegram ещё не привязан к goida vpn. напиши @vpngoidabot' : e.message);
+    } finally {
+      appReady = true; maybeReveal();
+    }
+  }
+
+  /* ── render — called ONCE after load; tab switches do NOT call this ── */
+  function render() {
+    const root = document.getElementById('root');
+    root.className = 'app';
+    /* build all three panels up front — hide inactive ones via CSS */
+    root.innerHTML =
+      '<section class="brand"><img class="logo" src="/goida.svg" alt="goida vpn"></section>' +
+      '<nav class="segments" id="nav"></nav>' +
+      '<div id="swipe">' +
+        '<section class="panel active" id="p-key"></section>' +
+        '<section class="panel" id="p-pay"></section>' +
+        '<section class="panel" id="p-srv"></section>' +
+      '</div>';
+    rebuildNav();
+    document.getElementById('p-key').innerHTML = panelKey();
+    document.getElementById('p-pay').innerHTML = panelPay();
+    document.getElementById('p-srv').innerHTML = panelInvites();
+    syncPaymentSlider();
+    syncOpenAccordions(root);
+    /* passive touch listeners — set ONCE, survive tab switches */
+    const sw = document.getElementById('swipe');
+    sw.addEventListener('touchstart', swipeStart, { passive: true });
+    sw.addEventListener('touchend',   swipeEnd,   { passive: true });
+    /* sheet close — passive on document */
+    document.getElementById('sheet').addEventListener('click', hideSheet);
+  }
+
+  function rebuildNav() {
+    const nav = document.getElementById('nav');
+    if (!nav) return;
+    nav.innerHTML = TAB_ORDER.map(t =>
+      `<button class="${activeTab===t?'active':''}" data-tab="${t}"></button>`
+    ).join('');
+    const labels = { key: 'главная', payment: 'оплата', invites: 'инвайты' };
+    nav.querySelectorAll('button').forEach(b => {
+      b.textContent = labels[b.dataset.tab];
+      b.onclick = () => setTab(b.dataset.tab);
+    });
+  }
+
+  /* ── setTab — NO full render, just swap classes + patch content ── */
+  function setTab(t) {
+    if (t === activeTab) return;
+    const dir = TAB_ORDER.indexOf(t) > TAB_ORDER.indexOf(activeTab) ? '26px' : '-26px';
+    document.documentElement.style.setProperty('--dx', dir);
+    /* update nav buttons */
+    document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
+    /* swap panel visibility */
+    const prev = document.getElementById(TAB_IDS[activeTab]);
+    const next = document.getElementById(TAB_IDS[t]);
+    if (prev) prev.classList.remove('active');
+    if (next) {
+      /* re-build content of payment/servers since they can be stale */
+      if (t === 'payment') next.innerHTML = panelPay();
+      if (t === 'invites') next.innerHTML = panelInvites();
+      next.classList.add('active');
+      if (t === 'payment') syncPaymentSlider();
+      if (t === 'invites') syncOpenAccordions(next);
+    }
+    prevTab = activeTab;
+    activeTab = t;
+  }
+
+  /* patch a panel section in-place without full re-render */
+  function patch(id, html) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = html;
+    if (id === 'p-pay') syncPaymentSlider();
+  }
+
+  /* ── panels ── */
+  function panelKey() {
+    const traffic = (state.traffic||{}).label || '—';
+    return `
+      <article class="card em">
+        <div class="row"><span class="muted" style="font-size:var(--t-sub)">активная подписка</span><button class="link-btn" onclick="confirmResetLink()">сбросить ссылку <span class="x">×</span></button></div>
+        <div class="key-username">${esc(state.username)}</div>
+        <div class="row" style="margin-top:10px">
+          <span class="muted" style="font-size:var(--t-caption)">трафик</span>
+          <span class="muted" style="font-size:var(--t-caption)">${esc(traffic)}</span>
+        </div>
+        <div class="urlbox">
+          <input readonly value="${ea(state.subscriptionUrl)}">
+          <button class="icon-btn copy-btn" onclick="copy('${ej(state.subscriptionUrl)}',this)" aria-label="скопировать">${COPY_ICON}</button>
+        </div>
+        <div style="margin-top:14px"><a class="btn btn-full" href="${ea(happUrl())}" target="_blank" rel="noopener">подключить</a></div>
+      </article>
+      ${dlBlock()}
+      ${devBlock()}
+      ${srvBlock()}`;
+  }
+
+  function panelPay() {
+    if (state.freeAccess) return '<article class="card"><h2>Бесплатный доступ</h2></article>';
+    const np  = state.basePrice + Math.max(0, desired - state.baseDevices) * state.extraDevicePrice;
+    const chg = desired !== state.deviceLimit;
+    const dt  = np - state.monthlyPrice;
+    const pending = state.pendingPlanRequest;
+    const locked = !!(state.invite && state.invite.paymentLocked);
+    return `
+      <article class="card">
+        <div><span class="muted" style="font-size:var(--t-caption)">оплачено до</span><div class="payment-date-val">${esc(state.paidUntilText||state.paidUntil||'—')}</div></div>
+        <div class="pay-toggle">
+          <div><div style="font-size:var(--t-headline);font-weight:500">уведомление об оплате</div><div class="pay-toggle-desc">напоминание за день до окончания</div></div>
+          <label class="switch"><input type="checkbox" ${state.paymentRemindersEnabled?'checked':''} onchange="toggleReminders(this.checked)"><span class="knob"><span class="knob-fill"></span><span class="knob-thumb"></span></span></label>
+        </div>
+      </article>
+      ${pendingPlanHtml(pending)}
+      <article class="card">
+        <div style="margin-bottom:14px"><span class="muted" style="font-size:var(--t-caption)">максимум устройств</span></div>
+        <div class="plan-stage">
+          <div class="plan-num">${desired}</div>
+          <div style="font-size:var(--t-headline);font-weight:500;margin-top:6px"><span class="plan-word">${devWord(desired)}</span></div>
+          <div class="plan-price-label" style="margin-top:2px"><span class="plan-price-val">${rub(np)}</span> / месяц</div>
+          <div class="muted" style="font-size:var(--t-caption);margin-top:2px">+${state.extraDevicePrice}₽ за каждое сверх ${state.baseDevices}</div>
+        </div>
+        <div class="slider-wrap">
+          <div class="slider" style="--fill:${fillPct()}%;--fill-num:${fillPct()}" onpointerdown="startSlide(event)">
+            <div class="s-track"></div><div class="s-fill"></div><div class="s-thumb" aria-hidden="true"></div>
+          </div>
+          <div class="s-ticks">${ticksHtml()}</div>
+        </div>
+        <div class="price-notice ${chg?'':'hidden'}">
+          <div><span style="font-size:var(--t-sub);font-weight:500">смена тарифа</span><br><span class="muted" style="font-size:var(--t-caption)">сейчас ${state.deviceLimit} ${devWord(state.deviceLimit)} · ${rub(state.monthlyPrice)}</span></div>
+          <span class="price-badge">${dt>0?'+':''}${rub(dt)} / мес</span>
+        </div>
+        ${locked ? '<div class="muted" style="font-size:var(--t-caption);margin-bottom:10px">оплата откроется после одобрения</div>' : ''}
+        <button class="btn btn-full plan-btn" ${(chg && !pending && !locked)?'':'disabled'} onclick="confirmPlan()">${locked?'ожидает одобрения':pending?'заявка уже отправлена':chg?'запросить смену тарифа':'тариф не изменён'}</button>
+      </article>`;
+  }
+
+  function subscriptionStatusHtml() {
+    const st = state.subscriptionStatus || {};
+    const paid = state.paidUntilText || state.paidUntil || '';
+    if (st.state === 'expired') {
+      const d = Math.abs(+st.expiresInDays || 0);
+      const tail = d ? ` ${d} ${dayWord(d)} назад` : '';
+      return `<div class="sub-status bad"><strong>подписка истекла${tail}</strong>${paid ? `<br>была активна до ${esc(paid)}` : ''}</div>`;
+    }
+    if (st.state === 'ending') {
+      const d = Math.max(0, +st.expiresInDays || 0);
+      const when = d === 0 ? 'сегодня' : `через ${d} ${dayWord(d)}`;
+      return `<div class="sub-status warn"><strong>подписка истекает ${when}</strong>${paid ? `<br>активна до ${esc(paid)}` : ''}</div>`;
+    }
+    if (paid) {
+      return `<div class="sub-status"><strong>подписка активна до ${esc(paid)}</strong></div>`;
+    }
+    return '';
+  }
+
+  function pendingPlanHtml(pending) {
+    if (!pending) return '';
+    return `<article class="card plan-pending">
+      <div class="price-notice" style="margin-bottom:0">
+        <div><span style="font-size:var(--t-sub);font-weight:500">заявка ожидает подтверждения</span><br><span class="muted" style="font-size:var(--t-caption)">${pending.oldLimit} ${devWord(pending.oldLimit)} / ${rub(pending.oldPrice)} → ${pending.newLimit} ${devWord(pending.newLimit)} / ${rub(pending.newPrice)}</span></div>
+        <span class="price-badge">#${pending.id}</span>
+      </div>
+    </article>`;
+  }
+
+  function panelInvites() {
+    if (!state.invites) {
+      loadInvites();
+      return `${inviteNoticeHtml()}
+      <article class="card loading-card" id="inv-loading">
+        <div class="loader-lens" aria-hidden="true"></div>
+        <div class="loader-title"><strong>загрузка инвайтов</strong><span>секунду</span></div>
+      </article>`;
+    }
+    return `${inviteNoticeHtml()}${invitesBodyHtml(state.invites)}`;
+  }
+
+  function invitesBodyHtml(inv) {
+    if (!inv || !inv.eligible) {
+      return `<article class="card">
+        <h2>инвайты</h2>
+        <p class="info-note" style="margin-top:10px">приглашай друзей после первой оплаты — получишь бесплатные дни за каждого, кто оплатит подписку</p>
+      </article>`;
+    }
+    const refLink = inv.refLink || '';
+    const shareText = inv.shareText || '';
+    return `
+      <article class="card em">
+        <h2>твоя ссылка</h2>
+        <p class="muted" style="font-size:var(--t-caption);margin-top:4px">друг переходит по ней в Telegram и сразу получает 7 дней триала</p>
+        <div class="urlbox">
+          <input readonly value="${ea(refLink)}">
+          <button class="icon-btn copy-btn" onclick="copy('${ej(refLink)}',this)" aria-label="скопировать">${COPY_ICON}</button>
+        </div>
+        <div class="qr-wrap" aria-hidden="true">${safeQr(refLink, 180)}</div>
+        <div style="margin-top:14px"><button class="btn btn-full" onclick="shareInvite('${ej(refLink)}','${ej(shareText)}')">поделиться</button></div>
+      </article>
+      <article class="card">
+        <h2>заработано дней</h2>
+        <div class="invite-stat">${+inv.earnedDays || 0} ${dayWord(+inv.earnedDays || 0)}</div>
+      </article>
+      <article class="card">
+        <div class="row"><h2>личное приглашение</h2></div>
+        <p class="muted" style="font-size:var(--t-caption);margin-top:4px">для друга без работающего Telegram — сразу выдаётся ссылка на подключение</p>
+        <div style="margin-top:14px"><button class="btn ghost btn-full" onclick="openPersonalInviteSheet()">создать личное приглашение</button></div>
+        ${personalPendingHtml(inv.personalPending)}
+      </article>
+      <article class="card">
+        <h2>приглашённые</h2>
+        ${invitedListHtml(inv.invited)}
+      </article>`;
+  }
+
+  function personalPendingHtml(list) {
+    if (!list || !list.length) return '';
+    return `<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--c-sep)">
+      <p class="muted" style="font-size:var(--t-caption);margin-bottom:4px">незавершённые</p>
+      ${list.map(p => `
+        <div class="invite-row">
+          <div>
+            <div class="invite-name">личное приглашение</div>
+            <div class="invite-meta">${esc(shortDate(p.createdAt))}</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="icon-btn" onclick="viewPersonalInvite(${jsonAttr(p)})" aria-label="показать">${EYE_ICON}</button>
+            <button class="btn danger" style="min-height:36px;padding:0 14px;font-size:var(--t-caption)" onclick="confirmRevoke(${+p.id})">отозвать</button>
+          </div>
+        </div>`).join('')}
+    </div>`;
+  }
+
+  function invitedListHtml(list) {
+    if (!list || !list.length) {
+      return `<p class="muted" style="font-size:var(--t-caption);margin-top:10px">пока никого — поделись ссылкой выше</p>`;
+    }
+    return list.map(i => `
+      <div class="invite-row">
+        <div>
+          <div class="invite-name">${esc(i.name || 'друг')}</div>
+          <div class="invite-meta">${esc(shortDate(i.createdAt))}</div>
+        </div>
+        <span class="pill ${statusPillClass(i.status)}">${esc(i.statusText || i.status || '—')}</span>
+      </div>`).join('');
+  }
+
+  function statusPillClass(status) {
+    if (status === 'paid') return 'pill-ok';
+    if (status === 'banned' || status === 'revoked' || status === 'expired') return 'pill-bad';
+    return 'pill-warn';
+  }
+
+  function shortDate(iso) {
+    if (!iso) return '—';
+    try {
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return '—';
+      return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    } catch { return '—'; }
+  }
+
+  function safeQr(text, size) {
+    if (!text || typeof window.renderQR !== 'function') return '';
+    try { return window.renderQR(text, size); } catch { return ''; }
+  }
+
+  function jsonAttr(obj) {
+    return "'" + ej(JSON.stringify(obj || {})) + "'";
+  }
+
+  async function loadInvites() {
+    if (loadInvites._inflight) return;
+    loadInvites._inflight = true;
+    try {
+      const d = await api('/api/invites');
+      state.invites = d;
+    } catch (e) {
+      state.invites = { eligible: false, invited: [], personalPending: [], earnedDays: 0 };
+      toast(e.message || 'не получилось загрузить инвайты');
+    } finally {
+      loadInvites._inflight = false;
+      if (activeTab === 'invites') {
+        patch('p-srv', `${inviteNoticeHtml()}${invitesBodyHtml(state.invites)}`);
+      }
+    }
+  }
+
+  function shareInvite(link, text) {
+    if (!link) return;
+    if (tg && typeof tg.openTelegramLink === 'function') {
+      tg.openTelegramLink('https://t.me/share/url?url=' + encodeURIComponent(link) + '&text=' + encodeURIComponent(text || ''));
+      return;
+    }
+    if (navigator.share) {
+      navigator.share({ text: text || link, url: link }).catch(() => {});
+      return;
+    }
+    copy(link);
+    toast('ссылка скопирована');
+  }
+
+  /* ── personal invite sheet ── */
+  function openPersonalInviteSheet() {
+    showSheetHtml('личное приглашение', '<div class="loader-lens" aria-hidden="true" style="justify-self:center"></div><p class="sheet-text" style="text-align:center">создание ссылки…</p>', [['закрыть','ghost',hideSheet]]);
+    createPersonalInvite();
+  }
+  async function createPersonalInvite() {
+    try {
+      const d = await api('/api/invites/personal', { method: 'POST', body: JSON.stringify({}) });
+      if (state.invites) {
+        state.invites.personalPending = state.invites.personalPending || [];
+        state.invites.personalPending.push({ id: d.id, subUrl: d.subUrl, deepLink: d.deepLink, status: 'created', createdAt: new Date().toISOString() });
+      }
+      renderPersonalInviteSheet(d);
+      if (activeTab === 'invites') patch('p-srv', `${inviteNoticeHtml()}${invitesBodyHtml(state.invites)}`);
+    } catch (e) {
+      hideSheet();
+      toast(e.message === 'not_eligible' ? 'доступно только после первой оплаты' : (e.message || 'не получилось создать приглашение'));
+    }
+  }
+  function renderPersonalInviteSheet(d) {
+    const subUrl = d.subUrl || '';
+    const deepLink = d.deepLink || '';
+    const shareText = d.shareText || '';
+    const html = `
+      <div class="sheet-field">
+        <div class="sheet-field-label">ссылка для впн-клиента друга</div>
+        <div class="urlbox"><input readonly value="${ea(subUrl)}"><button class="icon-btn copy-btn" onclick="copy('${ej(subUrl)}',this)" aria-label="скопировать">${COPY_ICON}</button></div>
+      </div>
+      <div class="sheet-field">
+        <div class="sheet-field-label">она же откроется в подписке — попроси привязать Telegram в течение часа</div>
+        <div class="urlbox"><input readonly value="${ea(deepLink)}"><button class="icon-btn copy-btn" onclick="copy('${ej(deepLink)}',this)" aria-label="скопировать">${COPY_ICON}</button></div>
+      </div>
+      <div class="qr-wrap" aria-hidden="true">${safeQr(deepLink || subUrl, 180)}</div>`;
+    showSheetHtml('личное приглашение готово', html, [
+      ['поделиться','', () => shareInvite(subUrl, shareText)],
+      ['отозвать','danger', () => { hideSheet(); confirmRevoke(d.id); }]
+    ]);
+  }
+  function viewPersonalInvite(json) {
+    let d = {};
+    try { d = JSON.parse(json); } catch {}
+    renderPersonalInviteSheet(d);
+  }
+  function confirmRevoke(id) {
+    showSheet('отозвать приглашение?', 'ссылка перестанет работать для друга, если он ещё не привязал Telegram.',
+      [['отмена','ghost',hideSheet],['отозвать','danger',()=>revokeInvite(id)]]);
+  }
+  async function revokeInvite(id) {
+    try {
+      await api('/api/invites/revoke', { method: 'POST', body: JSON.stringify({ id }) });
+      if (state.invites && state.invites.personalPending) {
+        state.invites.personalPending = state.invites.personalPending.filter(p => p.id !== id);
+      }
+      hideSheet();
+      toast('приглашение отозвано');
+      if (activeTab === 'invites') patch('p-srv', `${inviteNoticeHtml()}${invitesBodyHtml(state.invites)}`);
+    } catch (e) {
+      hideSheet();
+      toast(e.message === 'cannot_revoke' ? 'уже нельзя отозвать' : (e.message || 'не получилось отозвать'));
+    }
+  }
+
+  function inviteNoticeHtml() {
+    if (ls('invitesServersNoticeClosed') === '1') return '';
+    return `<article class="card notice" id="inv-notice">
+      <div><strong>сервера теперь на главной</strong></div>
+      <button class="notice-close" onclick="closeInvitesNotice()" aria-label="скрыть">×</button>
+    </article>`;
+  }
+
+  function srvBlock() {
+    const hasMore = state.servers.some(s => !CORE_KEYS.has(s.key));
+    return `<article class="card dl-card ${srvOpen?'open':''} ${srvAll?'srv-expanded':''}" id="srv-card">
+      <button class="dl-head" onclick="toggleSrvBlock()" aria-expanded="${srvOpen}">
+        <h2>сервера</h2><span class="dl-chevron">${CHEV}</span>
+      </button>
+      <div class="dl-body srv-body ${srvOpen?'show':''}">
+        <p class="muted" style="font-size:var(--t-caption)">отключите лишние для удобства в Happ</p>
+        ${state.servers.map(s=>{
+          const extra = !CORE_KEYS.has(s.key);
+          return `
+          <div class="srv-row ${extra?'srv-extra':''} ${extra && !srvAll?'hidden':''}">
+            <div><div class="srv-name">${esc(srvLabel(s))}</div><div class="srv-desc">${esc(serverDesc(s))}</div></div>
+            <label class="switch"><input type="checkbox" ${s.enabled?'checked':''} onchange="toggleSrv('${ej(s.key)}',this.checked)"><span class="knob"><span class="knob-fill"></span><span class="knob-thumb"></span></span></label>
+          </div>`}).join('')}
+        ${hasMore?(srvAll
+          ?`<button class="btn ghost btn-full" style="margin-top:12px" onclick="hideExtraSrv()">скрыть дополнительные</button>`
+          :`<button class="btn ghost btn-full" style="margin-top:12px" onclick="showAllSrv()">показать все серверы</button>`):''}
+      </div>
+    </article>`;
+  }
+
+  function dlBlock() {
+    const acts = DL[dlPlatform] || [];
+    return `<article class="card dl-card ${dlOpen?'open':''}" id="dl">
+      <button class="dl-head" onclick="toggleDl()" aria-expanded="${dlOpen}">
+        <h2>нет Happ? скачай!</h2><span class="dl-chevron">${CHEV}</span>
+      </button>
+      <div class="dl-body ${dlOpen?'show':''}">
+        <p class="muted" style="font-size:var(--t-caption)">выберите устройство</p>
+        <div class="dl-tabs">${DL_LABELS.map(([k,l])=>`<button class="${dlPlatform===k?'active':''}" onclick="setDlP('${ej(k)}')">${l}</button>`).join('')}</div>
+        <p class="muted" style="font-size:var(--t-caption)">скачивание</p>
+        <div class="dl-actions">${acts.map(([l,u])=>`<a href="${ea(u)}" rel="noopener">${esc(l)}</a>`).join('')}</div>
+      </div>
+    </article>`;
+  }
+
+  function devBlock() {
+    const cnt = state.freeAccess ? state.devices.length : `${state.devices.length}/${state.deviceLimit}`;
+    const inner = !state.devices.length
+      ? `<p class="muted" style="font-size:var(--t-caption)">появятся после первого подключения через Happ</p>`
+      : state.devices.map(d=>`
+          <div class="device">
+            <div class="dev-icon">${devIcon(d.icon)}</div>
+            <div><div class="dev-name">${esc(d.name)}</div><div class="dev-meta">${esc(devPlatform(d))}<br>${esc(d.firstSeen)} · ${esc(d.lastSeen)}</div></div>
+            <button class="btn danger" style="width:44px;min-height:44px;padding:0;font-size:18px" onclick="confirmUnbind('${ej(d.id)}','${ej(d.name)}')">×</button>
+          </div>`).join('') + addDevBtn();
+    return `<article class="card dl-card ${devOpen?'open':''}" id="devs">
+      <button class="dl-head" onclick="toggleDev()" aria-expanded="${devOpen}">
+        <h2 style="display:inline-flex;align-items:center;gap:8px">устройства <span class="pill">${cnt}</span></h2>
+        <span class="dl-chevron">${CHEV}</span>
+      </button>
+      <div class="dl-body ${devOpen?'show':''}">${inner}</div>
+    </article>`;
+  }
+
+  function addDevBtn() {
+    if (!(!state.freeAccess && state.devices.length >= state.deviceLimit && state.deviceLimit < 7)) return '';
+    return `<button class="add-dev-btn" onclick="goUpgrade()">${PLUS}докупить устройства</button>`;
+  }
+
+  /* ── icon constants — built once, reused ── */
+  const COPY_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"/></svg>';
+  const CHECK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+  const CHEV      = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>';
+  const PLUS      = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
+  const EYE_ICON  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
+
+  /* ── helpers ── */
+  function copy(text, btn) {
+    const done = () => {
+      if (!btn) return;
+      btn.innerHTML = CHECK_ICON;
+      btn.classList.add('done');
+      clearTimeout(btn._copyTimer);
+      btn._copyTimer = setTimeout(() => { btn.innerHTML = COPY_ICON; btn.classList.remove('done'); }, 1200);
+    };
+    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(done).catch(() => toast('не получилось скопировать'));
+    else toast('не получилось скопировать');
+  }
+  function toast(msg) { if(tg?.showPopup) tg.showPopup({title:'goida',message:msg,buttons:[{type:'ok'}]}); else alert(msg); }
+  function happUrl() { const t = state.subscriptionUrl.split('/').pop()||''; return `https://ru.goida.fun/happ/${encodeURIComponent(t)}`; }
+  function srvLabel(s) { return SRV_MAP[s.key] || SRV_MAP[s.label] || s.label; }
+  function serverDesc(s) {
+    if (s.key === 'smart') return 'Авто-выбор лучшего сервера';
+    if (s.key === 'smart-lite') return 'Оптимальный сервер (другой протокол, отлично подойдёт для FaceTime)';
+    if (s.key === 'reserve') return 'Запасной вход для мобильной связи (если\u00a0основной заблокирован)';
+    return s.description;
+  }
+  function fillPct() { return ((desired - state.baseDevices) / (7 - state.baseDevices)) * 100; }
+  function syncSliderVars(slider) {
+    if (!slider) return;
+    const pct = Math.max(0, Math.min(100, arguments.length > 1 ? arguments[1] : fillPct()));
+    const width = slider.getBoundingClientRect().width || slider.clientWidth || 0;
+    const thumbWidth = 42;
+    const pos = width > thumbWidth
+      ? (thumbWidth / 2) + (pct / 100) * (width - thumbWidth)
+      : width / 2;
+    slider.style.setProperty('--fill', pct + '%');
+    slider.style.setProperty('--fill-num', pct);
+    slider.style.setProperty('--thumb-pos', pos + 'px');
+  }
+  function syncPaymentSlider() {
+    requestAnimationFrame(() => syncSliderVars(document.querySelector('#p-pay .slider')));
+  }
+  function setAccordionHeight(body) {
+    if (!body) return;
+    body.style.setProperty('--dl-h', body.scrollHeight + 'px');
+  }
+  function resyncAccordionHeight(body) {
+    if (!body) return;
+    requestAnimationFrame(() => {
+      setAccordionHeight(body);
+      setTimeout(() => setAccordionHeight(body), 360);
+    });
+  }
+  function syncOpenAccordions(root = document) {
+    root.querySelectorAll('.dl-body.show').forEach(setAccordionHeight);
+  }
+  function ticksHtml() { let h=''; for(let n=state.baseDevices;n<=7;n++) h+=`<button class="s-tick ${n===desired?'active':''}" onclick="setLimit(${n})">${n}</button>`; return h; }
+  function devIcon(t) { return t==='apple'?'':t==='android'?'A':t==='windows'?'W':'•'; }
+  function devPlatform(d) { return [d.platform,d.platformVersion||d.appVersion].filter(Boolean).join(' · ')||'—'; }
+
+  function renderError(msg) {
+    const r = document.getElementById('root'); r.className = 'app';
+    const low = String(msg || '').toLowerCase();
+    // устаревшая сессия Telegram (initData TTL) — дружелюбный текст + кнопка перезахода
+    const expired = low.includes('initdata') || low.includes('expired') || low.includes('устарел');
+    const title = expired ? 'сессия устарела' : 'не получилось открыть';
+    const text = expired
+      ? 'просто откройте приложение заново — закройте это окно и снова нажмите кнопку в боте'
+      : esc(msg);
+    const btn = expired
+      ? `<button class="btn btn-full" style="margin-top:16px" onclick="location.reload()">открыть заново</button>`
+      : '';
+    r.innerHTML = '<section class="brand"><img class="logo" src="/goida.svg" alt="goida vpn"></section>' +
+      `<article class="card error"><h2>${title}</h2><p class="muted" style="margin-top:8px;font-size:var(--t-sub)">${text}</p>${btn}</article>`;
+  }
+
+  /* ── interactions ── */
+  function toggleDl() {
+    dlOpen = !dlOpen; ls('dlOpen', dlOpen?'1':'0');
+    const c = document.getElementById('dl'); if(!c) return;
+    const body = c.querySelector('.dl-body');
+    setAccordionHeight(body);
+    c.classList.toggle('open', dlOpen);
+    c.querySelector('.dl-head').setAttribute('aria-expanded', dlOpen);
+    body.classList.toggle('show', dlOpen);
+  }
+  function setDlP(k) {
+    dlPlatform = k;
+    const c = document.getElementById('dl');
+    if(c) {
+      c.outerHTML = dlBlock();
+      syncOpenAccordions(document.getElementById('dl'));
+    }
+  }
+  function toggleDev() {
+    devOpen = !devOpen; ls('devOpen', devOpen?'1':'0');
+    const c = document.getElementById('devs'); if(!c) return;
+    const body = c.querySelector('.dl-body');
+    setAccordionHeight(body);
+    c.classList.toggle('open', devOpen);
+    c.querySelector('.dl-head').setAttribute('aria-expanded', devOpen);
+    body.classList.toggle('show', devOpen);
+  }
+  function toggleSrvBlock() {
+    srvOpen = !srvOpen; ls('srvOpen', srvOpen?'1':'0');
+    const c = document.getElementById('srv-card'); if(!c) return;
+    const body = c.querySelector('.dl-body');
+    c.classList.toggle('open', srvOpen);
+    c.querySelector('.dl-head').setAttribute('aria-expanded', srvOpen);
+    body.classList.toggle('show', srvOpen);
+    resyncAccordionHeight(body);
+  }
+  function setSrvExpanded(open) {
+    srvAll = open; ls('srvAll', open?'1':'0');
+    const card = document.getElementById('srv-card');
+    if (!card) { patch('p-key', panelKey()); syncOpenAccordions(document.getElementById('p-key')); return; }
+    card.classList.toggle('srv-expanded', open);
+    card.querySelectorAll('.srv-extra').forEach(row => row.classList.toggle('hidden', !open));
+    const btn = card.querySelector('button.btn-full');
+    if (btn) {
+      btn.textContent = open ? 'скрыть дополнительные' : 'показать все серверы';
+      btn.setAttribute('onclick', open ? 'hideExtraSrv()' : 'showAllSrv()');
+    }
+    resyncAccordionHeight(card.querySelector('.dl-body'));
+  }
+  function showAllSrv() { setSrvExpanded(true); }
+  function hideExtraSrv() { setSrvExpanded(false); }
+  function closeInvitesNotice() {
+    ls('invitesServersNoticeClosed', '1');
+    const el = document.getElementById('inv-notice');
+    if (el) {
+      el.style.opacity = '0';
+      el.style.transform = 'translate3d(0,-4px,0)';
+      setTimeout(() => el.remove(), 180);
+    }
+  }
+  /* напоминание обновить подписку в Happ: не чаще 1 раза за сессию и не чаще раза в час */
+  function subHint() {
+    try {
+      if (sessionStorage.getItem('goida:hintSess')) return;
+      const last = parseInt(ls('hintTs') || '0', 10);
+      if (Date.now() - last < 3600000) return;
+      sessionStorage.setItem('goida:hintSess', '1');
+      ls('hintTs', String(Date.now()));
+      toast('не забудьте обновить подписку в Happ — изменения применятся после обновления');
+    } catch {}
+  }
+  function goUpgrade()  { desired = Math.min(7, Math.max(state.deviceLimit+1, state.baseDevices)); setTab('payment'); }
+  function setLimit(n)  {
+    desired = Math.max(state.baseDevices, Math.min(7, +n));
+    const card = document.querySelector('.plan-num')?.closest('.card');
+    if (card) {
+      const slider = card.querySelector('.slider');
+      syncSliderVars(slider);
+      updatePlan(card);
+    }
+    else patch('p-pay', panelPay());
+  }
+
+  /* updatePlan — batch all DOM reads first, then writes (no layout thrashing) */
+  function updatePlan(card) {
+    const np  = state.basePrice + Math.max(0, desired-state.baseDevices)*state.extraDevicePrice;
+    const chg = desired !== state.deviceLimit;
+    const dt  = np - state.monthlyPrice;
+    /* reads */
+    const num    = card.querySelector('.plan-num');
+    const word   = card.querySelector('.plan-word');
+    const priceV = card.querySelector('.plan-price-val');
+    const notice = card.querySelector('.price-notice');
+    const badge  = notice?.querySelector('.price-badge');
+    const btn    = card.querySelector('.plan-btn');
+    const ticks  = card.querySelectorAll('.s-tick');
+    /* writes — batched after all reads */
+    if (num)    { num.textContent = desired; num.classList.add('pop'); }
+    if (word)   word.textContent = devWord(desired);
+    if (priceV) priceV.textContent = rub(np);
+    ticks.forEach(b => b.classList.toggle('active', +b.textContent === desired));
+    if (notice) notice.classList.toggle('hidden', !chg);
+    if (badge)  badge.textContent = `${dt>0?'+':''}${rub(dt)} / мес`;
+    const locked = !!(state.invite && state.invite.paymentLocked);
+    if (btn)    { btn.disabled = !chg || !!state.pendingPlanRequest || locked; btn.textContent = locked ? 'ожидает одобрения' : state.pendingPlanRequest ? 'заявка уже отправлена' : chg ? 'запросить смену тарифа' : 'тариф не изменён'; }
+    clearTimeout(window._pop);
+    window._pop = setTimeout(() => num?.classList.remove('pop'), 160);
+  }
+
+  function confirmPlan() {
+    if (state.invite && state.invite.paymentLocked) return;
+    const np = state.basePrice + Math.max(0, desired-state.baseDevices)*state.extraDevicePrice;
+    showSheet('запросить смену тарифа?',
+      `${state.deviceLimit} ${devWord(state.deviceLimit)} / ${state.monthlyPrice}₽ → ${desired} ${devWord(desired)} / ${np}₽`,
+      [['отмена','ghost',hideSheet],['отправить','',reqPlan]]);
+  }
+  async function reqPlan() {
+    const d = await api('/api/plan/request',{method:'POST',body:JSON.stringify({deviceLimit:desired})});
+    if (d.pendingPlanRequest) state.pendingPlanRequest = d.pendingPlanRequest;
+    hideSheet(); toast('заявка отправлена'); desired = state.deviceLimit; patch('p-pay', panelPay());
+  }
+
+  /* ── slider — RAF throttled, no layout thrash ── */
+  let rafId = 0, slActive = false, swipeBlock = 0, slEl = null;
+
+  function startSlide(e) {
+    e.preventDefault();
+    slActive = true; slEl = e.currentTarget;
+    slEl.classList.add('dragging');
+    slEl.setPointerCapture(e.pointerId);
+    doSlide(e);
+    slEl.onpointermove = ev => {
+      ev.preventDefault();
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => doSlide(ev));
+    };
+    slEl.onpointerup = slEl.onpointercancel = ev => {
+      if (ev) ev.preventDefault();
+      slActive = false; swipeBlock = Date.now() + 350;
+      cancelAnimationFrame(rafId); rafId = 0;
+      slEl.onpointermove = null;
+      slEl.classList.remove('dragging');
+      syncSliderVars(slEl);
+    };
+  }
+  function doSlide(ev) {
+    const b = slEl.getBoundingClientRect();
+    const raw = Math.max(0, Math.min(1, (ev.clientX - b.left) / b.width));
+    const rawPct = raw * 100;
+    const nextDesired = Math.max(state.baseDevices, Math.min(7, Math.round(state.baseDevices + raw*(7-state.baseDevices))));
+    syncSliderVars(slEl, rawPct);
+    if (nextDesired !== desired) {
+      desired = nextDesired;
+      updatePlan(slEl.closest('.card'));
+    }
+  }
+
+  /* ── server/payment toggles ── */
+  async function toggleSrv(k, v) {
+    try {
+      const d = await api('/api/servers/toggle',{method:'POST',body:JSON.stringify({serverKey:k,enabled:v})});
+      state.servers = d.servers; patch('p-key', panelKey()); syncOpenAccordions(document.getElementById('p-key')); subHint();
+    } catch(e) { toast(e.message); state = await api('/api/me'); patch('p-key', panelKey()); syncOpenAccordions(document.getElementById('p-key')); }
+  }
+  async function toggleReminders(v) {
+    const prev = state.paymentRemindersEnabled; state.paymentRemindersEnabled = v;
+    try { await api('/api/payment-reminders',{method:'POST',body:JSON.stringify({enabled:v})}); }
+    catch(e) { state.paymentRemindersEnabled = prev; patch('p-pay', panelPay()); toast(e.message); }
+  }
+  function confirmUnbind(id, name) {
+    showSheet('Отвязать устройство', `Отвязать «${name}»? Придётся подключить заново.`,
+      [['отмена','ghost',hideSheet],['отвязать','danger',()=>unbind(id)]]);
+  }
+  async function unbind(id) {
+    await api('/api/devices/unbind',{method:'POST',body:JSON.stringify({deviceId:id})});
+    hideSheet(); state = await api('/api/me'); render();
+  }
+  function confirmResetLink() {
+    showSheet('Сбросить ссылку?', 'Старая ссылка перестанет открывать подписку. Новую нужно будет добавить в Happ заново.',
+      [['отмена','ghost',hideSheet],['сбросить','danger',resetLink]]);
+  }
+  async function resetLink() {
+    try {
+      const d = await api('/api/subscription/reset',{method:'POST',body:JSON.stringify({})});
+      state = d.profile || await api('/api/me');
+      hideSheet(); render();
+    } catch(e) {
+      hideSheet(); toast(e.message);
+    }
+  }
+
+  /* ── sheet ── */
+  let sheetActions = [];
+  function showSheet(title, text, btns) {
+    const sheet = document.getElementById('sheet');
+    sheet.classList.remove('show');
+    document.getElementById('sh-title').textContent = title;
+    document.getElementById('sh-text').textContent  = text;
+    sheetActions = btns.map(b => b[2]);
+    document.getElementById('sh-btns').innerHTML = btns.map((b,i)=>`<button class="btn ${b[1]||''}" onclick="SA(${i})">${b[0]}</button>`).join('');
+    void sheet.offsetHeight;
+    requestAnimationFrame(() => sheet.classList.add('show'));
+  }
+  /* like showSheet but body accepts trusted HTML (built from our own escaped fields) instead of plain text */
+  function showSheetHtml(title, html, btns) {
+    const sheet = document.getElementById('sheet');
+    sheet.classList.remove('show');
+    document.getElementById('sh-title').textContent = title;
+    document.getElementById('sh-text').innerHTML = html;
+    sheetActions = btns.map(b => b[2]);
+    document.getElementById('sh-btns').innerHTML = btns.map((b,i)=>`<button class="btn ${b[1]||''}" onclick="SA(${i})">${b[0]}</button>`).join('');
+    void sheet.offsetHeight;
+    requestAnimationFrame(() => sheet.classList.add('show'));
+  }
+  function SA(i) { sheetActions[i]?.(); }
+  function hideSheet(e) {
+    if (e instanceof Event && !e.target.classList.contains('sheet')) return;
+    document.getElementById('sheet').classList.remove('show');
+  }
+
+  /* ── swipe (passive listeners set in render()) ── */
+  let sx = 0, sy = 0;
+  function swipeStart(e) {
+    if (slActive || e.target?.closest?.('.slider')) { sx = null; return; }
+    sx = e.changedTouches[0].clientX;
+    sy = e.changedTouches[0].clientY;
+  }
+  function swipeEnd(e) {
+    if (slActive || !sx || Date.now() < swipeBlock) return;
+    const dx = e.changedTouches[0].clientX - sx;
+    const dy = e.changedTouches[0].clientY - sy;
+    if (Math.abs(dx) < 48 || Math.abs(dy) > 60 || Math.abs(dx) < Math.abs(dy)*1.4) return;
+    const i = TAB_ORDER.indexOf(activeTab);
+    const next = dx < 0 ? TAB_ORDER[Math.min(i+1,TAB_ORDER.length-1)] : TAB_ORDER[Math.max(i-1,0)];
+    if (next !== activeTab) setTab(next);
+  }
+
+  /* ── device model detection ── */
+  function guessPlatform() {
+    const ua = navigator.userAgent.toLowerCase();
+    if (/android/.test(ua)) return 'android';
+    if (/iphone|ipad|ios/.test(ua)) return 'ios';
+    if (/mac/.test(ua)) return 'macos';
+    if (/windows/.test(ua)) return 'windows';
+    return 'ios';
+  }
+  async function reportDeviceModel() {
+    const info = await getDevInfo();
+    if (!info.model) return;
+    try {
+      const r = await api('/api/device-model',{method:'POST',body:JSON.stringify(info)});
+      if (r.changed) { state = await api('/api/me'); render(); }
+    } catch {}
+  }
+  async function getDevInfo() {
+    const ua = navigator.userAgent||'', pl = guessPlatform(), ren = glRenderer();
+    let model='', ver=verFromUa(ua);
+    if (navigator.userAgentData?.getHighEntropyValues) {
+      try { const v=await navigator.userAgentData.getHighEntropyValues(['model','platformVersion']); model=v.model||''; ver=ver||v.platformVersion||''; } catch {}
+    }
+    if (!model && pl==='ios')   model = detectiPhone(ren);
+    if (!model && pl==='macos') model = detectMac(ren);
+    return {model, platform:pl, platformVersion:ver, renderer:ren};
+  }
+  function verFromUa(ua) {
+    const ios=ua.match(/(?:CPU iPhone OS|CPU OS|OS) ([0-9_]+)/i); if(/iPhone|iPad/i.test(ua)&&ios) return ios[1].replace(/_/g,'.');
+    const mac=ua.match(/Mac OS X ([0-9_]+)/i); if(mac) return mac[1].replace(/_/g,'.');
+    const and=ua.match(/Android ([0-9.]+)/i); if(and) return and[1];
+    return '';
+  }
+  function glRenderer() {
+    try {
+      const c=document.createElement('canvas'),g=c.getContext('webgl')||c.getContext('experimental-webgl');
+      if (!g) return '';
+      const e=g.getExtension('WEBGL_debug_renderer_info');
+      return e?String(g.getParameter(e.UNMASKED_RENDERER_WEBGL)||''):String(g.getParameter(g.RENDERER)||'');
+    } catch { return ''; }
+  }
+  function appleChip(r) { const m=String(r||'').match(/Apple\s+((?:A|M)\d+(?:\s+(?:Pro|Max|Ultra))?)/i); return m?m[1].replace(/\s+/g,' '):''; }
+  function detectiPhone(r) {
+    const c=appleChip(r).toUpperCase();
+    if(c==='A18') return 'iPhone 16'; if(c==='A17') return 'iPhone 15 Pro'; if(c==='A16') return 'iPhone 15';
+    if(c==='A15') return 'iPhone 13'; if(c==='A14') return 'iPhone 12';
+    const w=Math.min(screen.width,screen.height),h=Math.max(screen.width,screen.height),d=Math.round((window.devicePixelRatio||1)*100)/100;
+    return({'375x812@3':'iPhone X','390x844@3':'iPhone 12','393x852@3':'iPhone 15 Pro','414x896@2':'iPhone 11','414x896@3':'iPhone 11 Pro Max','428x926@3':'iPhone 14 Pro Max','430x932@3':'iPhone 15 Pro Max'})[`${w}x${h}@${d}`]||'iPhone';
+  }
+  function detectMac(r) { const c=appleChip(r); return c?`MacBook ${c}`:'MacBook'; }
+
+  window.addEventListener('resize', syncPaymentSlider, { passive: true });
+  window.addEventListener('resize', () => syncOpenAccordions(), { passive: true });
+  window.addEventListener('orientationchange', syncPaymentSlider, { passive: true });
+  window.addEventListener('orientationchange', () => syncOpenAccordions(), { passive: true });
+
+  /* ── launch splash reveal: wait for rendered app + warmed assets; no blank emerald frame ── */
+  let appReady = false, splashMinDone = false, assetsReady = false;
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function maybeReveal() { if (appReady && assetsReady && splashMinDone) hideSplash(); }
+  function hideSplash() {
+    const s = document.getElementById('splash');
+    if (!s || s.classList.contains('hide')) return;
+    s.classList.add('hide');
+    setTimeout(() => s.remove(), 650);
+  }
+  setTimeout(() => { splashMinDone = true; maybeReveal(); }, reduceMotion ? 0 : 850);
+
+  load();
+  </script>
+</body>
+</html>
