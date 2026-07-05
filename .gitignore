@@ -12,15 +12,29 @@ subscriptions/
 *.broken2
 subs-backup-*.txt
 
+# сторонний инструмент epilepsy — НИКОГДА в публичный репо (код + анализ)
+epilepsy/
+
 # memory palace — не для публичного репо
 .claude/
 .Codex/
+legacy/.Codex/
+legacy/.claude-old/
 deployer-bot/
+graphify-out/
 
 # python
 __pycache__/
 *.pyc
 *.pyo
+
+# локальный мусор / editor / runtime-артефакты
+tmp/
+tmp_*/
+tmp_*.py
+.cursor/
+.pytest_cache/
+/routing.json
 
 # os
 .DS_Store
