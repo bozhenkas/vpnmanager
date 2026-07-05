@@ -1,14 +1,20 @@
 [Unit]
-Description=Remnawave Hydra subscription updater
-After=network.target docker.service remnawave.service
+Description=Remnawave Hydra subscription updater (oneshot, timer-driven)
+After=network-online.target docker.service remnawave.service
+Wants=network-online.target
 
 [Service]
-Type=simple
+Type=oneshot
 Environment=REMNA_PUBLIC_PORT=443
 Environment=REMNA_NGINX_CONF=/etc/nginx/sites-enabled/ru.goida.fun
-ExecStart=/bin/bash -lc 'while true; do /usr/bin/python3 /root/goida-scripts/sync_remna_hydra.py || true; sleep 1800; done'
-Restart=always
-RestartSec=10
+ExecStart=/usr/bin/python3 /root/goida-scripts/sync_remna_hydra.py
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sub-updater
+# Resource limits — RSS ~1 MB observed; non-critical control task.
+MemoryHigh=96M
+MemoryMax=160M
+CPUQuota=30%
+OOMScoreAdjust=500
 
-[Install]
-WantedBy=multi-user.target
+# No [Install] — the .timer owns scheduling. Triggered as a oneshot.
