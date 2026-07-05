@@ -1,0 +1,19 @@
+[Unit]
+Description=goida xray intermesh router (RU local stage switch)
+After=network-online.target hysteria-client-fin-salamander.service hysteria-client-swe-salamander.service hysteria-client-fra.service epilepsy-fra-forward.service
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/xray run -confdir /etc/goida-intermesh/xray.d
+Restart=on-failure
+RestartSec=3
+LimitNOFILE=1048576
+NoNewPrivileges=yes
+ProtectSystem=full
+ReadWritePaths=/var/log/goida-intermesh
+ProtectHome=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -1,12 +1,14 @@
 [Unit]
-Description=Whitestore subscription updater
-After=network.target x-ui.service
+Description=Remnawave Hydra subscription updater
+After=network.target docker.service remnawave.service
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python3 /opt/sub-updater/updater.py
-Restart=on-failure
-RestartSec=30
+Environment=REMNA_PUBLIC_PORT=443
+Environment=REMNA_NGINX_CONF=/etc/nginx/sites-enabled/ru.goida.fun
+ExecStart=/bin/bash -lc 'while true; do /usr/bin/python3 /root/goida-scripts/sync_remna_hydra.py || true; sleep 1800; done'
+Restart=always
+RestartSec=10
 
 [Install]
 WantedBy=multi-user.target

@@ -1,0 +1,10 @@
+/var/log/goida/warn-error.log {
+    daily
+    maxsize 25M
+    rotate 7
+    missingok
+    notifempty
+    compress
+    delaycompress
+    copytruncate
+}

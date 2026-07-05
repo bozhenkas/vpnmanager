@@ -1,0 +1,32 @@
+# PROPOSED — RU — REPLACES the current while-loop sub-updater.service.
+# Current live unit runs:  bash -lc 'while true; do python sync_remna_hydra.py || true; sleep 1800; done'
+# Problem: the bash wrapper never exits, so Restart=always is dead code and a
+# hung/crashing inner python is invisible to systemd. Refactor to oneshot+timer
+# (same pattern already used by hwid-inspector / goida-warn-collect / ip-watchdog).
+#
+# Install this + sub-updater.timer, then:
+#   systemctl daemon-reload
+#   systemctl disable --now sub-updater.service   # stop the old while-loop instance
+#   systemctl enable --now sub-updater.timer
+# Rollback: restore the old while-loop sub-updater.service from git/backup,
+#   disable the timer, daemon-reload, start the service.
+[Unit]
+Description=Remnawave Hydra subscription updater (oneshot, timer-driven)
+After=network-online.target docker.service remnawave.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=REMNA_PUBLIC_PORT=443
+Environment=REMNA_NGINX_CONF=/etc/nginx/sites-enabled/ru.goida.fun
+ExecStart=/usr/bin/python3 /root/goida-scripts/sync_remna_hydra.py
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sub-updater
+# Resource limits — RSS ~1 MB observed; non-critical control task.
+MemoryHigh=96M
+MemoryMax=160M
+CPUQuota=30%
+OOMScoreAdjust=500
+
+# No [Install] — the .timer owns scheduling. Triggered as a oneshot.

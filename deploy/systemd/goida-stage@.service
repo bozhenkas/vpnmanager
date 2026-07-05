@@ -1,0 +1,22 @@
+[Unit]
+Description=goida intermesh legacy relay for link %i (socat TCP -> TARGET)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# legacy backend only. целевая модель — xray-intermesh + routing.generated.json.
+# TARGET (host:port текущей ступени) пишет switch.py в /etc/goida-intermesh/%i.env.
+# LISTEN порт линка передаётся как Environment в drop-in (см. README) либо хардкодится
+# в per-link override goida-stage-<link>.service.d/listen.conf.
+EnvironmentFile=/etc/goida-intermesh/%i.env
+EnvironmentFile=/etc/goida-intermesh/%i.listen.env
+# прозрачный TCP-релей: reality остаётся end-to-end между remnanode и exit-xray.
+ExecStart=/usr/bin/socat TCP4-LISTEN:${LISTEN},reuseaddr,fork,bind=127.0.0.1 TCP4:${TARGET}
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=yes
+MemoryMax=64M
+
+[Install]
+WantedBy=multi-user.target

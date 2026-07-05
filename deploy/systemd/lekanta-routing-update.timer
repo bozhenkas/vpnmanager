@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily Lekanta subscription routing JSON update
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+RandomizedDelaySec=1h
+Unit=lekanta-routing-update.service
+
+[Install]
+WantedBy=timers.target

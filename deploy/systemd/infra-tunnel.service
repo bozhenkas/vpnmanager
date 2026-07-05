@@ -1,0 +1,26 @@
+[Unit]
+Description=Infra backend SSH tunnel to FRA
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/ssh -NT \
+  -i /root/.ssh/infra_tunnel_ed25519 \
+  -p 17904 \
+  -o BatchMode=yes \
+  -o ExitOnForwardFailure=yes \
+  -o ServerAliveInterval=30 \
+  -o ServerAliveCountMax=3 \
+  -o StrictHostKeyChecking=yes \
+  -L 127.0.0.1:9082:127.0.0.1:9082 \
+  root@95.163.152.210
+Restart=always
+RestartSec=5
+MemoryHigh=24M
+MemoryMax=48M
+CPUQuota=10%
+OOMScoreAdjust=-100
+
+[Install]
+WantedBy=multi-user.target

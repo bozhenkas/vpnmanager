@@ -1,0 +1,16 @@
+# PROPOSED — RU — drives sub-updater.service on the old 1800s (30 min) cadence.
+# Replaces the in-bash `sleep 1800` loop with a proper timer that systemd tracks,
+# so a crash/hang of one run is visible and the next run still fires on schedule.
+[Unit]
+Description=Remnawave Hydra subscription updater timer (every 30 min)
+Requires=sub-updater.service
+
+[Timer]
+# Run shortly after boot, then every 30 minutes (matches old sleep 1800).
+OnBootSec=2min
+OnUnitActiveSec=30min
+AccuracySec=60s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

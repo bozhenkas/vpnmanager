@@ -1,0 +1,25 @@
+[Unit]
+Description=goida intermesh switch (POST actuator for RU->exit links)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# токен обязателен (файл 600). bind только на localhost — анализатор вызывает локально.
+Environment=SWITCH_BIND=127.0.0.1
+Environment=SWITCH_PORT=9099
+Environment=SWITCH_CONF_DIR=/etc/goida-intermesh
+Environment=SWITCH_BACKEND=remnawave
+Environment=SWITCH_REMNA_PROFILE_NAME=ru-ws-ingress
+ExecStart=/usr/bin/python3 /opt/goida-intermesh/switch.py
+Restart=on-failure
+RestartSec=3
+# права: меняет Remnawave config_profile через локальный postgres-контейнер и рестартит remnanode.
+NoNewPrivileges=yes
+ProtectSystem=full
+ReadWritePaths=/etc/goida-intermesh
+ProtectHome=yes
+MemoryMax=64M
+
+[Install]
+WantedBy=multi-user.target

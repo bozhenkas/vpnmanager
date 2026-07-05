@@ -1,0 +1,14 @@
+[Unit]
+Description=goida client telegram bot and mini app api
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/goida-client
+EnvironmentFile=/etc/goida-client/client-bot.env
+ExecStart=/usr/bin/python3 /opt/goida-client/client-bot/client-bot.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

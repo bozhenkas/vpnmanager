@@ -1,0 +1,11 @@
+[Unit]
+Description=rkn-checker timer (every 5 min)
+Requires=rkn-checker.service
+
+[Timer]
+OnCalendar=*:0/5
+AccuracySec=30s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,38 @@
+[Unit]
+Description=ru-geo-analyzer — детект RU-серверов (промахов geoip:ru) из xray access.log
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/ru-geo-analyzer
+EnvironmentFile=-/etc/ru-geo-analyzer/config.env
+Restart=always
+RestartSec=10
+
+# --- ресурсы: демон должен быть незаметным на 2-vCPU RU-боксе ---
+MemoryMax=64M
+CPUQuota=15%
+Nice=10
+IOSchedulingClass=idle
+
+# --- состояние: /var/lib/ru-geo-analyzer (state.json + candidates.json) ---
+StateDirectory=ru-geo-analyzer
+StateDirectoryMode=0750
+
+# --- sandboxing ---
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictSUIDSGID=true
+LockPersonality=true
+# access.log читается только; путь задаётся через RGA_LOG_PATH (см. config.env).
+# Если лог bind-mount'ится из контейнера на хост — укажи host-путь.
+ReadOnlyPaths=/var/log/remnanode
+
+[Install]
+WantedBy=multi-user.target

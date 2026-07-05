@@ -1,0 +1,27 @@
+[Unit]
+Description=goida intermesh analyzer (transport failover decision maker)
+Wants=goida-intermesh-switch.service
+After=network-online.target goida-intermesh-switch.service
+
+[Service]
+Type=oneshot
+Environment=ANALYZER_CONF_DIR=/etc/goida-intermesh
+Environment=ANALYZER_LINKS=/etc/goida-intermesh/links.json
+Environment=ANALYZER_STATE=/var/lib/goida-intermesh-analyzer/state.json
+Environment=ANALYZER_SWITCH_URL=http://127.0.0.1:9099
+Environment=ANALYZER_BOT_ACTION_URL=http://127.0.0.1:9090/analyzer
+Environment=ANALYZER_HOME_SSH_KEY=/etc/goida-intermesh/ssh/home-ladon
+Environment=ANALYZER_CONFIRM_ATTEMPTS=3
+Environment=ANALYZER_CONFIRM_DELAY=25
+Environment=ANALYZER_CONFIRM_JITTER=5
+Environment=ANALYZER_APPLY=0
+EnvironmentFile=-/etc/goida-intermesh/analyzer.env
+ExecStart=/usr/bin/python3 /opt/goida-intermesh/analyzer.py
+User=root
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=read-only
+ProtectSystem=strict
+StateDirectory=goida-intermesh-analyzer
+ReadWritePaths=/var/lib/goida-intermesh-analyzer
+ReadWritePaths=/opt/ladon/state

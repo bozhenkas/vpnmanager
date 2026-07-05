@@ -1,0 +1,51 @@
+{
+  "_comment": "САНИТИЗИРОВАННЫЙ пример схемы инвентаря. Реальный cluster.json (с боевыми IP) лежит в gitignored .claude/cluster/cluster.json и деплоится зашифрованным age как /etc/goida/cluster.age на каждой ноде. IP здесь из TEST-NET (RFC 5737), не боевые.",
+  "schema": 1,
+  "version": 1,
+  "updated_at": "2026-06-19T00:00:00Z",
+  "updated_by": 0,
+  "servers": {
+    "ru": {
+      "role": "primary",
+      "status": "active",
+      "domain": "ru.example.fun",
+      "ip": "203.0.113.10",
+      "ssh_host": "203.0.113.10",
+      "ssh_port": 17904,
+      "cf_managed": true,
+      "transports": ["ws-tls", "subscription-ingress"],
+      "services": ["nginx", "vpn-bot", "remnawave"],
+      "tags": ["ingress", "censored"]
+    },
+    "fin": {
+      "role": "exit",
+      "status": "active",
+      "domain": "fin.example.fun",
+      "ip": "203.0.113.20",
+      "ssh_port": 17904,
+      "transports": ["grpc-reality:443"],
+      "tags": ["exit", "foreign", "transport-trial:grpc"]
+    },
+    "swe": {
+      "role": "exit",
+      "status": "active",
+      "domain": "swe.example.fun",
+      "ip": "203.0.113.30",
+      "ssh_port": 17904,
+      "transports": ["xhttp-reality:443"],
+      "tags": ["exit", "foreign", "transport-trial:xhttp"]
+    },
+    "backup": {
+      "role": "backup",
+      "status": "backup",
+      "ip": "203.0.113.40",
+      "cf_managed": true,
+      "transports": ["smart2-xhttp-reality:7443", "smart-lite-hy2:8443"],
+      "tags": ["backup", "hysteria2-fallback"]
+    }
+  },
+  "cloudflare": {
+    "primary_domain": "ru.example.fun"
+  },
+  "legacy_blocklist": ["198.51.100.7"]
+}

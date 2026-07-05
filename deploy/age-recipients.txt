@@ -1,0 +1,26 @@
+# age-recipients.txt — ПУБЛИЧНЫЕ ключи получателей зашифрованного инвентаря.
+#
+# Канонический cluster.json шифруется на ВСЕ ключи ниже (multi-recipient):
+#   age -R deploy/age-recipients.txt -o cluster.age cluster.json
+# Каждая нода расшифровывает СВОИМ приватным ключом (mode 600, root):
+#   age -d -i /etc/goida/age.key cluster.age            # Linux-ноды
+#   age -d -i ~/.config/goida/age.key cluster.age       # mac-home-exit
+#
+# Публичные ключи (age1...) безопасны для коммита. Приватные ключи НИКОГДА не
+# покидают ноду и НЕ коммитятся. Генерация ключа на ноде:
+#   age-keygen -o /etc/goida/age.key   # печатает строку "Public key: age1..."
+#
+# Phase 2 (runbook): сгенерировать ключи на каждой ноде, вставить публичные
+# части сюда, закоммитить, затем впервые зашифровать и разложить cluster.age.
+# Ротация при компромете ноды: убрать её строку, перешифровать, разложить.
+#
+# server-id = age-public-key  (заполняется на Phase 2 деплое)
+
+# ru     = age1PLACEHOLDER_ru
+# fin    = age1PLACEHOLDER_fin
+# swe    = age1PLACEHOLDER_swe
+# fra    = age1PLACEHOLDER_fra
+# backup = age1PLACEHOLDER_backup
+# ru4    = age1PLACEHOLDER_ru4
+# home   = age1PLACEHOLDER_home_mac_exit
+# agent  = age1PLACEHOLDER_ai_agent_readonly

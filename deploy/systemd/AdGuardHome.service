@@ -1,0 +1,25 @@
+# AdGuard Home — жёсткий adblock (ads+trackers) DoH-резолвер.
+# Живёт на FIN (77.110.108.57 / fin.goida.fun), НЕ на RU — апстрим-резолвинг
+# зарубежки выходит с финского egress, чтобы не палить RU IP перед Google/Gemini.
+# Web UI: 127.0.0.1:3000 (только через SSH-туннель :17904, не публичный).
+# DoH listener: 0.0.0.0:8443 с сертификатом dns.goida.fun (certbot DNS-01 Cloudflare).
+# Upstream: DoH 1.1.1.1 + 9.9.9.9. Клиент Happ ходит на https://dns.goida.fun:8443/dns-query.
+# Ставится официальным установщиком: `/opt/AdGuardHome/AdGuardHome -s install`.
+[Unit]
+Description=AdGuard Home: Network-level blocker
+ConditionFileIsExecutable=/opt/AdGuardHome/AdGuardHome
+After=syslog.target network-online.target
+
+[Service]
+StartLimitInterval=5
+StartLimitBurst=10
+Type=simple
+ExecStart=/opt/AdGuardHome/AdGuardHome "-s" "run"
+WorkingDirectory=/opt/AdGuardHome
+StandardOutput=file:/var/log/AdGuardHome.out
+StandardError=file:/var/log/AdGuardHome.err
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

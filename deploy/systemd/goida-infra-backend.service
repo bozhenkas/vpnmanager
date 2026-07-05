@@ -1,0 +1,22 @@
+[Unit]
+Description=Goida infra backend (FRA)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/goida-infra/infra.env
+WorkingDirectory=/root/goida-infra
+ExecStart=/usr/bin/python3 /root/goida-infra/infra-backend.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=goida-infra
+MemoryHigh=64M
+MemoryMax=96M
+CPUQuota=30%
+OOMScoreAdjust=400
+
+[Install]
+WantedBy=multi-user.target

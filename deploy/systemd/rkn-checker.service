@@ -1,0 +1,13 @@
+[Unit]
+Description=rkn-checker VPN endpoint availability check
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=bozhenkas
+EnvironmentFile=/etc/rkn-checker/rkn-checker.env
+ExecStart=/usr/bin/python3 /opt/rkn-checker/rkn-checker.py
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=rkn-checker

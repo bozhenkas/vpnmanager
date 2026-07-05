@@ -1,0 +1,12 @@
+[Unit]
+Description=ru-geo-updater — авто-промоут confirmed RU-ресурсов в роутинг + отдаваемый routing.json
+After=ru-geo-analyzer.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/ru-geo-analyzer/config.env
+ExecStart=/root/vpn-bot/scripts/ru-geo-update.sh
+Nice=10
+# Идемпотентно: если новых confirmed нет — скрипт сам ничего не пишет и не
+# перезапускает vpn-bot.

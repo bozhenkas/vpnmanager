@@ -5,6 +5,7 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
+User=bozhenkas
 EnvironmentFile=/etc/ip-watchdog/watchdog.env
 ExecStart=/usr/bin/python3 /opt/ip-watchdog/watchdog.py
 StandardOutput=journal

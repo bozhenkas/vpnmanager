@@ -1,0 +1,11 @@
+[Unit]
+Description=Update Lekanta subscription routing JSON
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# ROUTING_SHARE_TOKEN живёт только в этом файле на сервере Lekanta, не в репозитории.
+EnvironmentFile=-/etc/default/lekanta-routing-update
+ExecStart=/usr/bin/python3 /usr/local/sbin/update-lekanta-routing.py
+User=root
