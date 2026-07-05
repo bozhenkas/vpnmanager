@@ -76,6 +76,8 @@ RU_DIRECT_DOMAINS: list[str] = [
     "domain:cobrowsing.tbank.ru",
     "domain:le.tbank.ru",
     "domain:cdn.tbank.ru",
+    "domain:tbank-online.com",
+    "domain:tcsbank.ru",
     # альфабанк
     "domain:alfabank.ru",
     "domain:metrics.alfabank.ru",

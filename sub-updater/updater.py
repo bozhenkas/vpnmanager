@@ -1,18 +1,29 @@
 #!/usr/bin/env python3
-import base64, json, logging, os, re, socket, sqlite3, subprocess, tempfile, time, urllib.parse, urllib.request
+import argparse, base64, difflib, json, logging, os, re, socket, sqlite3, subprocess, sys, tempfile, time, urllib.parse, urllib.request
 
-SUB_URL   = "https://sub.whitestore.club/zPFyxgNrQGy2ekY7"
+# читаем оверрайд из конфига, выставленного ботом
+_CONFIG_ENV = "/opt/sub-updater/config.env"
+if os.path.exists(_CONFIG_ENV):
+    with open(_CONFIG_ENV) as _f:
+        for _line in _f:
+            _line = _line.strip()
+            if _line and "=" in _line and not _line.startswith("#"):
+                _k, _, _v = _line.partition("=")
+                os.environ.setdefault(_k.strip(), _v.strip())
+
+SUB_URL = os.environ.get("SUB_URL", "https://sub.whitestore.club/zPFyxgNrQGy2ekY7")
+SUB_UA  = os.environ.get("SUB_UA", "v2box_short")
 DB_PATH   = "/etc/x-ui/x-ui.db"
 LOG_PATH  = os.environ.get("SUB_UPDATER_LOG_PATH", "/var/log/sub-updater-ru.log")
 WL_FILE        = "/opt/sub-updater/whitelist_links.txt"
 WL_MANUAL      = "/opt/sub-updater/whitelist_manual.txt"
-WL_REGISTRY_URL = "https://ru.goida.fun/wl/list"
+WL_REGISTRY_FILE = "/opt/wl-registry/wl-list.txt"
 WL_KEYWORDS    = ["Whitelist", "РЕЗЕРВ"]
 XRAY_BIN      = os.environ.get("XRAY_BIN", "/usr/local/x-ui/bin/xray-linux-amd64")
 WL_PROBE_URL  = os.environ.get("WL_PROBE_URL", "https://www.gstatic.com/generate_204")
 WL_PROBE_ATTEMPTS = int(os.environ.get("WL_PROBE_ATTEMPTS", "3"))
 WL_PROBE_MIN_OK   = int(os.environ.get("WL_PROBE_MIN_OK", "2"))
-INTERVAL     = 600
+INTERVAL     = 1800
 HWID         = "up8jf5kjyrzi0013"
 SMART_IB_ID  = int(os.environ.get("SMART_IB_ID", "5"))  # id инбаунда smart на RU
 HYDRA_PORT_BASE = 10100  # порты 10101..10110 для hydra inbound'ов
@@ -63,6 +74,8 @@ RU_FLAG_TO_CC = {
 RU_BALANCER_SMART_HYDRA_CC = set()  # hydra в balancer-smart отключена; только proxy-fi/proxy-se
 AUTO_RULE_TAGS = {
     "goida-block-youtube-quic-20260512",
+    "goida-smart-telegram-zapret-domain-20260518",
+    "goida-smart-telegram-zapret-ip-20260518",
     "custom-ru-direct",
 }
 
@@ -78,6 +91,116 @@ WL_FAIL_COUNTS: dict = {}
 logging.basicConfig(filename=LOG_PATH, level=logging.INFO,
                     format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger()
+
+
+def _utc_ts() -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def ensure_template_backups_table(conn) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS template_backups (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at TEXT NOT NULL,
+            reason TEXT NOT NULL,
+            content TEXT NOT NULL
+        )
+        """
+    )
+
+
+def backup_template(conn, reason: str, content: str | None = None) -> int:
+    """сохраняет xrayTemplateConfig перед изменением и держит последние 10."""
+    ensure_template_backups_table(conn)
+    if content is None:
+        row = conn.execute("SELECT value FROM settings WHERE key='xrayTemplateConfig'").fetchone()
+        if not row:
+            raise RuntimeError("xrayTemplateConfig не найден")
+        content = row[0]
+    cur = conn.execute(
+        "INSERT INTO template_backups(created_at, reason, content) VALUES (?, ?, ?)",
+        (_utc_ts(), reason, content),
+    )
+    conn.execute(
+        """
+        DELETE FROM template_backups
+        WHERE id NOT IN (
+            SELECT id FROM template_backups ORDER BY id DESC LIMIT 10
+        )
+        """
+    )
+    return cur.lastrowid
+
+
+def _template_diff(before: str, after: str) -> str:
+    before_lines = before.splitlines(keepends=True)
+    after_lines = after.splitlines(keepends=True)
+    return "".join(difflib.unified_diff(
+        before_lines,
+        after_lines,
+        fromfile="xrayTemplateConfig.before",
+        tofile="xrayTemplateConfig.after",
+    ))
+
+
+def print_dry_run(before_template: str, after_template: str, changes: int) -> None:
+    diff = _template_diff(before_template, after_template)
+    if diff:
+        print(diff, end="" if diff.endswith("\n") else "\n")
+    print(f"DRY RUN: {changes} changes, run without --dry-run to apply")
+
+
+def update_template_config(
+    conn,
+    new_content: str,
+    reason: str,
+    *,
+    old_content: str | None = None,
+    dry_run: bool = False,
+    extra_changes: int = 0,
+) -> bool:
+    if old_content is None:
+        row = conn.execute("SELECT value FROM settings WHERE key='xrayTemplateConfig'").fetchone()
+        if not row:
+            raise RuntimeError("xrayTemplateConfig не найден")
+        old_content = row[0]
+    template_changed = old_content != new_content
+    changes = (1 if template_changed else 0) + extra_changes
+    if dry_run:
+        print_dry_run(old_content, new_content, changes)
+        return template_changed
+    if not template_changed:
+        return False
+    backup_id = backup_template(conn, reason, old_content)
+    conn.execute("UPDATE settings SET value=? WHERE key='xrayTemplateConfig'", (new_content,))
+    log.info(f"xrayTemplateConfig backup id={backup_id}, reason={reason}")
+    return True
+
+
+def restore_template(backup_id: int, db_path: str = DB_PATH, conn=None) -> bool:
+    """восстанавливает xrayTemplateConfig из template_backups по id."""
+    own_conn = conn is None
+    if own_conn:
+        conn = sqlite3.connect(db_path, timeout=30)
+    try:
+        ensure_template_backups_table(conn)
+        row = conn.execute("SELECT content FROM template_backups WHERE id=?", (backup_id,)).fetchone()
+        if not row:
+            raise ValueError(f"template backup id={backup_id} не найден")
+        current = conn.execute("SELECT value FROM settings WHERE key='xrayTemplateConfig'").fetchone()
+        if not current:
+            raise RuntimeError("xrayTemplateConfig не найден")
+        if current[0] == row[0]:
+            return False
+        backup_template(conn, f"restore-before-{backup_id}", current[0])
+        conn.execute("UPDATE settings SET value=? WHERE key='xrayTemplateConfig'", (row[0],))
+        if own_conn:
+            conn.commit()
+        return True
+    finally:
+        if own_conn:
+            conn.close()
 
 
 def clean_name(name: str) -> str:
@@ -234,7 +357,7 @@ def check_wl_alive(s: dict, timeout: float = 10.0) -> bool:
 
 
 def fetch_sub():
-    req = urllib.request.Request(SUB_URL, headers={"User-Agent": "v2box_short", "X-HWID": HWID})
+    req = urllib.request.Request(SUB_URL, headers={"User-Agent": SUB_UA, "X-HWID": HWID})
     with urllib.request.urlopen(req, timeout=15) as r:
         data = r.read()
     try:
@@ -466,9 +589,6 @@ def _ru_extract_manual_domain_rules(rules: list[dict]) -> list[dict]:
         for domain in domains:
             if not domain.startswith("domain:"):
                 continue
-            # Static generated domains are already represented in _ru_build_routing_rules.
-            if domain in _RU_STATIC_GENERATED_DOMAINS:
-                continue
             key = (kind, domain)
             if key in seen:
                 continue
@@ -529,14 +649,17 @@ _RU_HOME_MAC_DOMAINS = [
     "domain:ozon.ru","domain:ozonusercontent.com","domain:ozone.ru",
     "domain:avito.ru","domain:avito.st","domain:lamoda.ru",
     "domain:lemanapro.ru","domain:vseinstrumenty.ru",
-    "domain:sbrf.ru","domain:sber.ru","domain:tbank.ru","domain:alfabank.ru",
+    "domain:sbrf.ru","domain:sber.ru","domain:sberbank.com",
+    "domain:tbank.ru","domain:tbank-online.com","domain:tcsbank.ru",
+    "domain:tochka.com","domain:tochka-tech.com",
+    "domain:alfabank.ru",
     "domain:raiffeisen.ru","domain:gazprombank.ru","domain:gu-st.ru",
     "domain:nalog.ru","domain:lkfl.nalog.ru","domain:ivi.ru","domain:okko.tv",
     "domain:wink.ru","domain:more.tv","domain:hh.ru","domain:headhunter.ru",
     "domain:cian.ru","domain:litres.ru","domain:2gis.ru","domain:2gis.com",
     "domain:gismeteo.ru","domain:rambler.ru","domain:tutu.ru","domain:vkusvill.ru",
     "domain:lenta.com","domain:gorzdrav.spb.ru","domain:lk.sut.ru",
-    "domain:gov.spb.ru","domain:mplusdeti.ru","domain:msk.cloud.vk.com",
+    "domain:gov.spb.ru","domain:mplusdeti.ru",
     "domain:dixy.ru","domain:213.180.193.226","domain:213.180.193.135",
     "domain:84.252.149.208","domain:188.68.217.194","domain:46.243.227.98",
     "domain:boosty.to",
@@ -551,16 +674,28 @@ _RU_IP_LEAK_DOMAINS = [
     "domain:icanhazip.com","domain:ifconfig.me","domain:ifconfig.co",
     "domain:checkip.amazonaws.com","domain:ident.me",
 ]
-_RU_YT_DISCORD_DOMAINS = ["geosite:youtube","domain:googlevideo.com","geosite:discord"]
+_RU_YT_DISCORD_DOMAINS = ["geosite:youtube","domain:googlevideo.com"]
+_RU_TELEGRAM_DOMAINS = [
+    "domain:t.me","domain:telegram.me","domain:telegram.org","domain:telegram.dog",
+    "domain:telegra.ph","domain:web.telegram.org","domain:api.telegram.org",
+]
+_RU_TELEGRAM_IPS = [
+    "91.108.4.0/22","91.108.8.0/22","91.108.12.0/22","91.108.16.0/22",
+    "91.108.56.0/22","91.105.192.0/23","149.154.160.0/20",
+]
 _RU_CUSTOM_DIRECT_DOMAINS = [
     "domain:sbermarket.com","domain:avito.ru","domain:wildberries.ru",
     "domain:ozon.ru","domain:vk.com","domain:funpay.com",
     "domain:mangalib.org","domain:api.cdnlibs.org",
+    # RU CDN/сервисы из hydra-подписки (sync 2026-06-12)
+    "domain:yandexcloud.net","domain:vk-cdn.net","domain:mycdn.me",
+    "domain:cdnvideo.com","domain:habr.com","domain:max.ru",
 ]
 _RU_STATIC_GENERATED_DOMAINS = set(
     _RU_HOME_MAC_DOMAINS
     + _RU_IP_LEAK_DOMAINS
     + _RU_YT_DISCORD_DOMAINS
+    + _RU_TELEGRAM_DOMAINS
     + _RU_CUSTOM_DIRECT_DOMAINS
     + ["domain:www.happ.su", "ext:itdog_geosite.dat:russia-inside@geoblock", "geosite:category-ru"]
 )
@@ -575,6 +710,8 @@ def _ru_build_routing_rules(active_ccs: set, multi_ccs: set | None = None, manua
         "77.88.0.0/18","84.252.128.0/18","87.250.224.0/19","93.158.128.0/18",
         "95.108.128.0/17","141.8.128.0/18","178.154.128.0/18","185.71.76.0/22",
         "213.180.192.0/21","84.201.0.0/16","51.250.0.0/16","130.193.0.0/16",
+        # T-Bank / bank netblocks (sync с hydra-подпиской 2026-06-12)
+        "212.233.73.228/32","212.233.73.46/32","85.192.34.0/23",
     ]
     R = []
     add = R.append
@@ -597,11 +734,21 @@ def _ru_build_routing_rules(active_ccs: set, multi_ccs: set | None = None, manua
     add({"type":"field","inboundTag":["inbound-10003","inbound-10005"],
          "ip": HOME_MAC_IPS, "outboundTag":"home-mac-exit"})
 
-    # smart: yt/discord → direct (на RU без zapret)
+    # smart: yt → direct (на RU без zapret); discord убран — падает в catch-all → balancer-smart
     add({"type":"field","inboundTag":["inbound-10003"],
          "domain": _RU_YT_DISCORD_DOMAINS, "network":"tcp","outboundTag":"direct"})
     add({"type":"field","inboundTag":["inbound-10003"],
          "domain": _RU_YT_DISCORD_DOMAINS, "port":"443","network":"udp","outboundTag":"direct"})
+
+    # smart/smart-pro: telegram upload держим на FI, чтобы не попадать в SE/RU-zapret.
+    add({"type":"field","ruleTag":"goida-smart-telegram-zapret-domain-20260518",
+         "inboundTag":["inbound-10003","inbound-10005"],
+         "domain": _RU_TELEGRAM_DOMAINS,
+         "network":"tcp,udp","outboundTag":"proxy-fi"})
+    add({"type":"field","ruleTag":"goida-smart-telegram-zapret-ip-20260518",
+         "inboundTag":["inbound-10003","inbound-10005"],
+         "ip": _RU_TELEGRAM_IPS,
+         "network":"tcp,udp","outboundTag":"proxy-fi"})
 
     # smart-pro: port:53 → dns-out (ДО universal RU)
     add({"type":"field","inboundTag":["inbound-10005"],"port":"53","outboundTag":"dns-out"})
@@ -646,7 +793,7 @@ def _ru_build_routing_rules(active_ccs: set, multi_ccs: set | None = None, manua
     return R
 
 
-def manage_hydra_ru(hydra_servers, conn) -> bool:
+def manage_hydra_ru(hydra_servers, conn, dry_run: bool = False) -> bool:
     """RU-режим. Возвращает True если template/inbounds изменились (нужен restart x-ui)."""
     # 1. сопоставление имени/флага → country code
     cc_to_servers = {}
@@ -678,7 +825,8 @@ def manage_hydra_ru(hydra_servers, conn) -> bool:
     if not row:
         log.error("xrayTemplateConfig не найден")
         return False
-    cfg = json.loads(row[0])
+    template_before = row[0]
+    cfg = json.loads(template_before)
     cfg_before = json.dumps(cfg, sort_keys=True)
     manual_rules = _ru_extract_manual_domain_rules(cfg.get("routing", {}).get("rules", []))
     if manual_rules:
@@ -765,20 +913,51 @@ def manage_hydra_ru(hydra_servers, conn) -> bool:
         ib_id, enable_cur, remark_cur = row_in
         want_enable = 1 if cc in active_ccs else 0
         if enable_cur != want_enable:
-            conn.execute("UPDATE inbounds SET enable=? WHERE id=?", (want_enable, ib_id))
+            if not dry_run:
+                conn.execute("UPDATE inbounds SET enable=? WHERE id=?", (want_enable, ib_id))
             db_changes += 1
             log.info(f"RU hydra: inbound port={port} ({cc}) enable {enable_cur}→{want_enable}")
+
+    # 8.1 mini app prefs: удаляем настройки по hydra-серверам, которых больше нет в живой подписке.
+    stale_client_keys = [f"hydra:{cc}" for cc in RU_COUNTRY_SLOTS if cc not in active_ccs]
+    if stale_client_keys:
+        placeholders = ",".join("?" for _ in stale_client_keys)
+        try:
+            if dry_run:
+                cur = conn.execute(
+                    f"SELECT COUNT(*) FROM client_server_prefs WHERE server_key IN ({placeholders})",
+                    tuple(stale_client_keys),
+                )
+                row_count = cur.fetchone()[0]
+            else:
+                cur = conn.execute(
+                    f"DELETE FROM client_server_prefs WHERE server_key IN ({placeholders})",
+                    tuple(stale_client_keys),
+                )
+                row_count = cur.rowcount
+            if row_count:
+                db_changes += 1
+                log.info(f"RU hydra: очищены client_server_prefs для исчезнувших стран = {stale_client_keys}")
+        except sqlite3.OperationalError:
+            # client mini app ещё может быть не установлена на старом сервере.
+            pass
 
     # 9. сохраняем template
     cfg_after = json.dumps(cfg, sort_keys=True)
     template_changed = cfg_before != cfg_after
-    if template_changed:
-        conn.execute("UPDATE settings SET value=? WHERE key='xrayTemplateConfig'",
-                     (json.dumps(cfg, indent=2, ensure_ascii=False),))
+    template_after = json.dumps(cfg, indent=2, ensure_ascii=False)
+    saved_template = update_template_config(
+        conn,
+        template_after,
+        "manage_hydra_ru",
+        old_content=template_before,
+        dry_run=dry_run,
+        extra_changes=db_changes,
+    )
 
     if template_changed or db_changes:
         log.info(f"RU hydra: template_changed={template_changed} db_changes={db_changes}")
-    return template_changed or db_changes > 0
+    return saved_template or template_changed or db_changes > 0
 
 
 def update_nginx(hydra_inbounds):
@@ -823,7 +1002,7 @@ def update_nginx(hydra_inbounds):
 
 # ─── main loop ───────────────────────────────────────────────────────────────
 
-def run_once():
+def run_once(dry_run: bool = False):
     try:
         raw = fetch_sub()
         hydra_servers, wl_servers = [], []
@@ -840,12 +1019,13 @@ def run_once():
                 hydra_servers.append(s)
 
         # ── whitelist: сборка ручного списка (реестр → локальный fallback) ──
+        # WL_REGISTRY_FILE читается локально (sub-updater и vpn-bot на одном хосте RU);
+        # раньше был self-HTTP на публичный /wl/list, который убрали как дублирующий
+        # /wl/share без токена/IP-allowlist (2026-07-05).
         manual_lines = []
         try:
-            req = urllib.request.Request(
-                WL_REGISTRY_URL, headers={"User-Agent": "sub-updater/1.0"})
-            with urllib.request.urlopen(req, timeout=10) as r:
-                manual_lines = [l.strip() for l in r.read().decode().splitlines() if l.strip()]
+            with open(WL_REGISTRY_FILE) as f:
+                manual_lines = [l.strip() for l in f if l.strip()]
             log.info(f"registry: получено {len(manual_lines)} WL конфигов")
         except Exception as e:
             log.warning(f"registry недоступен ({e}), читаем локальный файл")
@@ -907,8 +1087,11 @@ def run_once():
             if lnk:
                 final_lines.append(lnk)
 
-        with open(WL_FILE, "w") as f:
-            f.write("\n".join(final_lines) + ("\n" if final_lines else ""))
+        if dry_run:
+            log.info(f"dry-run: whitelist файл не пишем ({len(final_lines)} строк)")
+        else:
+            with open(WL_FILE, "w") as f:
+                f.write("\n".join(final_lines) + ("\n" if final_lines else ""))
         excluded = len(all_wl_servers) - len(stable_alive)
         log.info(
             f"whitelist: {len(stable_alive)} живых "
@@ -924,11 +1107,14 @@ def run_once():
         if MANAGE_HYDRA_RU:
             conn = sqlite3.connect(DB_PATH, timeout=30)
             try:
-                changed = manage_hydra_ru(hydra_servers, conn)
+                changed = manage_hydra_ru(hydra_servers, conn, dry_run=dry_run)
                 if changed:
-                    conn.commit()
-                    log.info("RU hydra: изменения, перезапускаем x-ui")
-                    subprocess.run(["systemctl","restart","x-ui"], capture_output=True)
+                    if dry_run:
+                        log.info("RU hydra: dry-run, БД/x-ui не трогаем")
+                    else:
+                        conn.commit()
+                        log.info("RU hydra: изменения, перезапускаем x-ui")
+                        subprocess.run(["systemctl","restart","x-ui"], capture_output=True)
                 else:
                     log.info("RU hydra: без изменений, x-ui не трогаем")
             finally:
@@ -943,7 +1129,19 @@ def run_once():
 
         # ── hydra inbound'ы и routing в x-ui (lekanta-режим) ──
         conn = sqlite3.connect(DB_PATH, timeout=30)
-        hydra_inbounds = sync_hydra_inbounds(hydra_servers, conn)
+        if dry_run:
+            log.warning("dry-run для MANAGE_HYDRA не меняет inbounds; diff шаблона строится по текущим inbound-hydra-*")
+            hydra_inbounds = [
+                {"tag": tag, "id": ib_id, "port": port, "path": f"/h/{n}", "name": remark}
+                for n, (ib_id, tag, port, remark) in enumerate(
+                    conn.execute(
+                        "SELECT id, tag, port, remark FROM inbounds WHERE tag LIKE 'inbound-hydra-%' ORDER BY tag"
+                    ).fetchall(),
+                    start=1,
+                )
+            ]
+        else:
+            hydra_inbounds = sync_hydra_inbounds(hydra_servers, conn)
 
         row = conn.execute("SELECT value FROM settings WHERE key='xrayTemplateConfig'").fetchone()
         if not row:
@@ -952,13 +1150,23 @@ def run_once():
             return
         cfg = json.loads(row[0])
         cfg = update_xray_routing(cfg, hydra_servers, hydra_inbounds)
-        conn.execute("UPDATE settings SET value=? WHERE key='xrayTemplateConfig'",
-                     (json.dumps(cfg, indent=2, ensure_ascii=False),))
-        conn.commit()
+        changed = update_template_config(
+            conn,
+            json.dumps(cfg, indent=2, ensure_ascii=False),
+            "manage_hydra",
+            old_content=row[0],
+            dry_run=dry_run,
+        )
+        if not dry_run:
+            conn.commit()
         conn.close()
 
-        log.info(f"обновлено {len(hydra_servers)} hydra серверов, перезапускаем x-ui")
-        subprocess.run(["systemctl", "restart", "x-ui"], capture_output=True)
+        if dry_run:
+            log.info(f"dry-run: собрано {len(hydra_servers)} hydra серверов")
+            return
+        if changed:
+            log.info(f"обновлено {len(hydra_servers)} hydra серверов, перезапускаем x-ui")
+            subprocess.run(["systemctl", "restart", "x-ui"], capture_output=True)
 
         # ── nginx ──
         update_nginx(hydra_inbounds)
@@ -967,8 +1175,24 @@ def run_once():
         log.error(f"ошибка: {e}", exc_info=True)
 
 
-if __name__ == "__main__":
-    run_once()
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="goida sub-updater")
+    parser.add_argument("--dry-run", action="store_true", help="собрать template и показать diff без записи в БД")
+    parser.add_argument("--restore-template", type=int, metavar="ID", help="восстановить xrayTemplateConfig из backup id")
+    args = parser.parse_args(argv)
+
+    if args.restore_template is not None:
+        changed = restore_template(args.restore_template)
+        print(f"restore_template: {'restored' if changed else 'already current'}")
+        return 0
+
+    run_once(dry_run=args.dry_run)
+    if args.dry_run:
+        return 0
     while True:
         time.sleep(INTERVAL)
         run_once()
+
+
+if __name__ == "__main__":
+    sys.exit(main())
