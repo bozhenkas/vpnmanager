@@ -12,11 +12,11 @@ DNS failover для RU-сервера через Cloudflare API.
 ```
 [Домашний сервер, ISP: 78.107.88.21]
         │
-        ├── TCP+TLS probe → 83.147.255.98:443   (PRIMARY_IP)
+        ├── TCP+TLS probe → 45.91.54.152:443   (PRIMARY_IP)
         │     fail × 3 → failover
         │
         ├── Cloudflare API → PATCH /dns_records  (TTL=60)
-        │     A ru.goida.fun → 83.147.255.168   (BACKUP_IP)
+        │     A ru.goida.fun → 45.91.53.93   (BACKUP_IP)
         │
         └── POST https://ru.goida.fun/notify     (relay-алерт)
               → nginx allow 78.107.88.21
@@ -28,8 +28,8 @@ DNS failover для RU-сервера через Cloudflare API.
 
 | Переменная | Описание | Пример |
 |---|---|---|
-| `PRIMARY_IP` | основной IP RU-сервера | `83.147.255.98` |
-| `BACKUP_IP` | резервный IP RU-сервера | `83.147.255.168` |
+| `PRIMARY_IP` | основной IP RU-сервера | `45.91.54.152` |
+| `BACKUP_IP` | резервный IP RU-сервера | `45.91.53.93` |
 | `DOMAIN` | домен для проверки SNI и DNS | `ru.goida.fun` |
 | `CHECK_PORT` | порт для TLS-пробы | `443` |
 | `CF_TOKEN` | Cloudflare API token (Edit zone DNS) | |
@@ -37,10 +37,17 @@ DNS failover для RU-сервера через Cloudflare API.
 | `NOTIFY_URL` | URL relay-ручки на RU-сервере | `https://ru.goida.fun/notify` |
 | `NOTIFY_TOKEN` | shared secret для `/notify` | |
 | `STATE_FILE` | файл с текущим активным IP | `/var/lib/ip-watchdog/state` |
+| `MANUAL_OVERRIDE_FILE` | файл ручной фиксации DNS IP; если A-запись изменили вручную, watchdog не трогает DNS | `/var/lib/ip-watchdog/manual-override` |
 | `FAIL_THRESHOLD` | проб до failover | `3` |
 | `PROBE_TIMEOUT` | таймаут одной пробы (сек) | `8` |
 | `RETRY_DELAY` | пауза между пробами (сек) | `10` |
 | `AUTO_RECOVERY` | вернуть DNS на primary когда восстановится | `1` |
+
+## Ручной DNS override
+
+Если A-запись `ru.goida.fun` вручную поменяли через `/dnsip` или Cloudflare UI, а её значение отличается от последнего IP, который записал `ip-watchdog` в `STATE_FILE`, watchdog считает это ручным override.
+
+В этом режиме он не возвращает DNS на primary и не делает failover, пока ручной IP остаётся активным. Чтобы вернуть автоматический режим, нужно вручную вернуть DNS на IP из `STATE_FILE` или удалить `MANUAL_OVERRIDE_FILE`.
 
 ## Деплой на домашний сервер (Linux/systemd)
 
