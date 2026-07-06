@@ -158,22 +158,37 @@ def pick_line_by_remark(lines: list[str], needle: str) -> str | None:
 
 def invite_temp_hour_content(real_line: str, deep_link: str) -> str:
     fake = fake_vless_content(
-        "❗️ПРОЧИТАЙТЕ ОПИСАНИЕ❗️",
-        [f"доступ временный (1 час) — нажмите на значок самолётика/поделиться и откройте {deep_link}, чтобы привязать телеграм"],
+        "доступ временный (1 час)",
+        ["инструкция в описании подписки"],
     )
     fake_lines = fake.splitlines()
     return "\n".join([fake_lines[0], real_line] + fake_lines[1:])
+
+
+def invite_temp_hour_description(deep_link: str) -> str:
+    return "\n".join([
+        "доступ временный: 1 час.",
+        "чтобы продолжить, нажмите на значок самолётика/поделиться справа сверху и привяжите Telegram.",
+        "после привязки Telegram откроется полноценный триал на 7 дней.",
+    ])
 
 
 def invite_hour_expired_content(deep_link: str) -> str:
     return fake_vless_content(
         "доступ истёк — привяжи телеграм",
         [
-            "час бесплатного доступа закончился",
-            f"привяжите телеграм по ссылке: {deep_link}",
-            "после привязки откроется полноценный триал на 7 дней",
+            "инструкция в описании подписки",
         ],
     )
+
+
+def invite_hour_expired_description(deep_link: str) -> str:
+    return "\n".join([
+        "час временного доступа закончился.",
+        "VPN снова откроется после привязки Telegram.",
+        "нажмите на значок самолётика/поделиться справа сверху и привяжите Telegram.",
+        "после привязки Telegram откроется полноценный триал на 7 дней.",
+    ])
 
 
 def invite_expired_content() -> str:

@@ -54,7 +54,9 @@ from subscription import (
     rename_remark,
     pick_line_by_remark,
     invite_temp_hour_content,
+    invite_temp_hour_description,
     invite_hour_expired_content,
+    invite_hour_expired_description,
     invite_expired_content,
     invite_banned_content,
     invite_trial_expired_content,
@@ -858,9 +860,12 @@ def apply_invite_lazy_transition(conn: sqlite3.Connection, invite_row: dict, now
 INVITE_SMART_REMARK = "Оптимальный 🇸🇨"
 
 
+def invite_deep_link(invite_row: dict) -> str:
+    return f"https://t.me/{CLIENT_BOT_USERNAME}?start=link_{invite_row['token']}"
+
+
 def build_invite_mode_content(invite_row: dict, mode: str, username: str, client_ip: str, ua: str) -> str:
-    invite_token = invite_row["token"]
-    deep_link = f"https://t.me/{CLIENT_BOT_USERNAME}?start=link_{invite_token}"
+    deep_link = invite_deep_link(invite_row)
     if mode == "temp_hour":
         real_line = pick_line_by_remark(remna_live_custom_sub(username).splitlines(), INVITE_SMART_REMARK)
         real_line = rename_remark(real_line, " [1 час]") if real_line else ""
@@ -876,6 +881,21 @@ def build_invite_mode_content(invite_row: dict, mode: str, username: str, client
     if mode == "trial_expired":
         return invite_trial_expired_content()
     return ""
+
+
+def build_invite_mode_description(invite_row: dict, mode: str) -> str:
+    deep_link = invite_deep_link(invite_row)
+    if mode == "temp_hour":
+        return invite_temp_hour_description(deep_link)
+    if mode == "hour_expired":
+        return invite_hour_expired_description(deep_link)
+    return get_subscribe_next_description()
+
+
+def build_invite_mode_support_url(invite_row: dict, mode: str) -> str:
+    if mode in ("temp_hour", "hour_expired"):
+        return invite_deep_link(invite_row)
+    return NEXT_SUPPORT_URL
 
 
 def reward_days(inviter_profile: dict, friend_profile: dict) -> int:
@@ -3188,8 +3208,10 @@ def handle_subscribe_next(
         mode = decide_invite_mode(invite_row, now)
         if mode != "normal":
             content = build_invite_mode_content(invite_row, mode, username, client_ip, ua)
+            invite_description = build_invite_mode_description(invite_row, mode)
+            invite_support_url = build_invite_mode_support_url(invite_row, mode)
             body = SubscriptionEngine.encode_body(content)
-            headers = engine.normal_headers(body, description=description, support_url=NEXT_SUPPORT_URL)
+            headers = engine.normal_headers(body, description=invite_description, support_url=invite_support_url)
             if kind == "json" or (kind == "plain" and client_type == "happ" and public_path in HAPP_JSON_PUBLIC_PATHS):
                 finish(
                     200,

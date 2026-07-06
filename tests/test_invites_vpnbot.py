@@ -113,6 +113,21 @@ class DecideInviteModeTest(unittest.TestCase):
         row = self.row(status="tg_pending", first_fetch_at=first_fetch.isoformat())
         self.assertEqual(self.bot.decide_invite_mode(row, now), "expired")
 
+    def test_temp_hour_description_uses_support_url_for_deep_link(self):
+        row = self.row(token="tok-link")
+        description = self.bot.build_invite_mode_description(row, "temp_hour")
+        support_url = self.bot.build_invite_mode_support_url(row, "temp_hour")
+        self.assertIn("значок самолётика", description)
+        self.assertNotIn("tok-link", description)
+        self.assertTrue(support_url.endswith("?start=link_tok-link"))
+
+    def test_non_link_mode_support_url_stays_default(self):
+        row = self.row(token="tok-link")
+        self.assertEqual(
+            self.bot.build_invite_mode_support_url(row, "banned"),
+            self.bot.NEXT_SUPPORT_URL,
+        )
+
     def test_unknown_status_defaults_normal(self):
         row = self.row(status="something_else")
         self.assertEqual(self.bot.decide_invite_mode(row, datetime.now(timezone.utc)), "normal")

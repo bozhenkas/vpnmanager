@@ -14,7 +14,9 @@ from subscription import (
     happ_routing_line,
     invite_banned_content,
     invite_expired_content,
+    invite_hour_expired_description,
     invite_hour_expired_content,
+    invite_temp_hour_description,
     invite_temp_hour_content,
     invite_trial_expired_content,
     pick_line_by_remark,
@@ -450,16 +452,30 @@ class SubscriptionEngineTest(unittest.TestCase):
         fake_lines = [l for l in vless_lines if l != real_line]
         self.assertEqual(len(fake_lines), 1)
         self.assertEqual(SubscriptionEngine._link_remark(real_line), "Оптимальный 🇸🇨 [1 час]")
-        decoded_fake = urllib.parse.unquote(fake_lines[0])
-        self.assertIn(deep_link, decoded_fake)
+        self.assertEqual(SubscriptionEngine._link_remark(fake_lines[0]), "инструкция в описании подписки")
+        self.assertNotIn(deep_link, urllib.parse.unquote(fake_lines[0]))
+
+    def test_invite_temp_hour_description_contains_deep_link_instruction(self):
+        deep_link = "https://t.me/vpngoidabot?start=link_abc123"
+        description = invite_temp_hour_description(deep_link)
+        self.assertNotIn(deep_link, description)
+        self.assertIn("значок самолётика", description)
+        self.assertIn("1 час", description)
 
     def test_invite_hour_expired_content_contains_deep_link(self):
         deep_link = "https://t.me/vpngoidabot?start=link_abc123"
         content = invite_hour_expired_content(deep_link)
         self.assertTrue(content.splitlines()[0].startswith("#profile-title:"))
         decoded = urllib.parse.unquote(content)
-        self.assertIn(deep_link, decoded)
-        self.assertIn("телеграм", decoded)
+        self.assertNotIn(deep_link, decoded)
+        self.assertIn("описании подписки", decoded)
+
+    def test_invite_hour_expired_description_contains_deep_link_instruction(self):
+        deep_link = "https://t.me/vpngoidabot?start=link_abc123"
+        description = invite_hour_expired_description(deep_link)
+        self.assertNotIn(deep_link, description)
+        self.assertIn("значок самолётика", description)
+        self.assertIn("триал", description)
 
     def test_invite_expired_content_mentions_expiry(self):
         content = invite_expired_content()
