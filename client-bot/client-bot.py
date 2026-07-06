@@ -18,7 +18,6 @@ import os
 import re
 import secrets
 import sqlite3
-import subprocess
 import sys
 import time
 import urllib.error
@@ -28,6 +27,15 @@ from datetime import date, datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Thread
+
+from remnawave_client import (
+    pg_quote,
+    remnawave_delete_device,
+    remnawave_devices_by_username as remnawave_devices,
+    remnawave_query,
+    remnawave_user,
+    remnawave_user_squads,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -105,7 +113,6 @@ TOKEN = os.environ.get("CLIENT_BOT_TOKEN") or os.environ.get("BOT_TOKEN")
 OWNER_ID = int(os.environ.get("CLIENT_OWNER_ID", "294057781"))
 BOT_DB = os.environ.get("CLIENT_BOT_DB", "/root/vpn-bot/bot.db")
 XUI_DB = os.environ.get("CLIENT_XUI_DB", "/etc/x-ui/x-ui.db")
-REMNAWAVE_DB_CONTAINER = os.environ.get("CLIENT_REMNAWAVE_DB_CONTAINER", "remnawave-db")
 WEB_PORT = int(os.environ.get("CLIENT_WEB_PORT", "9081"))
 WEBAPP_URL = os.environ.get("CLIENT_WEBAPP_URL", "https://web.goida.fun/")
 SUBSCRIPTION_BASE = os.environ.get("CLIENT_SUBSCRIPTION_BASE", "https://ru.goida.fun/subscribe")
@@ -666,91 +673,6 @@ def set_free_access(username: str, enabled: bool) -> None:
     conn.close()
 
 
-def pg_quote(v: str) -> str:
-    return "'" + str(v).replace("'", "''") + "'"
-
-
-def remnawave_query(sql: str) -> str:
-    proc = subprocess.run(
-        [
-            "docker", "exec", REMNAWAVE_DB_CONTAINER,
-            "psql", "-U", "postgres", "-d", "postgres", "-At", "-c", sql,
-        ],
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
-        timeout=5,
-        check=False,
-    )
-    if proc.returncode != 0:
-        return ""
-    return proc.stdout.strip()
-
-
-def remnawave_user(username: str) -> dict | None:
-    safe = username.replace("'", "''")
-    raw = remnawave_query(
-        "select json_build_object("
-        "'uuid', uuid, 'username', username, 'shortUuid', short_uuid, "
-        "'status', status, 'expireAt', expire_at, "
-        "'deviceLimit', coalesce(hwid_device_limit, 0), "
-        "'usedTrafficBytes', coalesce(ut.used_traffic_bytes, 0), "
-        "'lifetimeUsedTrafficBytes', coalesce(ut.lifetime_used_traffic_bytes, 0)"
-        ")::text "
-        "from users u left join user_traffic ut on ut.t_id=u.t_id "
-        f"where u.username='{safe}' limit 1;"
-    )
-    if not raw:
-        return None
-    try:
-        return json.loads(raw)
-    except Exception:
-        return None
-
-
-def remnawave_devices(username: str) -> list[dict]:
-    safe = username.replace("'", "''")
-    raw = remnawave_query(
-        "select coalesce(json_agg(json_build_object("
-        "'hwid', d.hwid, "
-        "'platform', coalesce(nullif(d.platform, ''), nullif(src.platform, ''), ''), "
-        "'osVersion', coalesce(nullif(d.os_version, ''), nullif(src.os_version, ''), ''), "
-        "'deviceModel', coalesce(nullif(d.device_model, ''), nullif(src.device_model, ''), ''), "
-        "'userAgent', coalesce(nullif(d.user_agent, ''), nullif(src.user_agent, ''), ''), "
-        "'createdAt', d.created_at, 'updatedAt', d.updated_at"
-        ") order by d.updated_at desc), '[]'::json)::text "
-        "from hwid_user_devices d join users u on u.uuid=d.user_uuid "
-        "left join lateral ("
-        "select platform, os_version, device_model, user_agent "
-        "from hwid_user_devices x "
-        "where x.hwid=d.hwid "
-        "and (nullif(x.platform, '') is not null or nullif(x.os_version, '') is not null or nullif(x.device_model, '') is not null) "
-        "order by x.updated_at desc limit 1"
-        ") src on true "
-        f"where u.username='{safe}';"
-    )
-    try:
-        return json.loads(raw or "[]")
-    except Exception:
-        return []
-
-
-def remnawave_delete_device(username: str, hwid: str) -> int:
-    safe_user = username.replace("'", "''")
-    safe_hwid = hwid.replace("'", "''")
-    raw = remnawave_query(
-        "with deleted as ("
-        "delete from hwid_user_devices d using users u "
-        f"where u.uuid=d.user_uuid and u.username='{safe_user}' and d.hwid='{safe_hwid}' "
-        "returning 1"
-        ") select count(*) from deleted;"
-    )
-    try:
-        return int(raw or "0")
-    except ValueError:
-        return 0
-
-
 def user_hydra_enabled(username: str) -> bool:
     if not username:
         return False
@@ -818,30 +740,7 @@ def remnawave_server_catalog(username: str) -> list[dict]:
     """строит remnawave-серверы из squads панели; fallback остаётся legacy."""
     if not username:
         return []
-    sql_user = username.replace("'", "''")
-    sql = (
-        "select s.name from users u "
-        "join internal_squad_members m on m.user_id=u.t_id "
-        "join internal_squads s on s.uuid=m.internal_squad_uuid "
-        f"where u.username='{sql_user}' order by s.name;"
-    )
-    try:
-        proc = subprocess.run(
-            [
-                "docker", "exec", REMNAWAVE_DB_CONTAINER,
-                "psql", "-U", "postgres", "-d", "postgres", "-At", "-c", sql,
-            ],
-            text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            timeout=3,
-            check=False,
-        )
-    except Exception:
-        return []
-    if proc.returncode != 0:
-        return []
-    squads = {line.strip() for line in proc.stdout.splitlines() if line.strip()}
+    squads = remnawave_user_squads(username)
     if not squads:
         return []
 

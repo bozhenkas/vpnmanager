@@ -76,20 +76,52 @@ def remnawave_user_by_short_uuid(short_uuid: str) -> dict | None:
 
 
 def remnawave_devices_by_username(username: str) -> list[dict]:
+    """список устройств юзера; platform/osVersion/deviceModel/userAgent бэкфиллятся
+    lateral-джойном по hwid из последней записи этого hwid, где эти поля были
+    непустыми — так корректно отображаются модель/платформа даже если самая
+    свежая запись устройства их не несёт (например от tag-only heartbeat).
+    """
     safe = username.replace("'", "''")
     raw = remnawave_query(
         "select coalesce(json_agg(json_build_object("
-        "'hwid', d.hwid, 'platform', d.platform, 'osVersion', d.os_version, "
-        "'deviceModel', d.device_model, 'userAgent', d.user_agent, "
+        "'hwid', d.hwid, "
+        "'platform', coalesce(nullif(d.platform, ''), nullif(src.platform, ''), ''), "
+        "'osVersion', coalesce(nullif(d.os_version, ''), nullif(src.os_version, ''), ''), "
+        "'deviceModel', coalesce(nullif(d.device_model, ''), nullif(src.device_model, ''), ''), "
+        "'userAgent', coalesce(nullif(d.user_agent, ''), nullif(src.user_agent, ''), ''), "
         "'createdAt', d.created_at, 'updatedAt', d.updated_at"
         ") order by d.updated_at desc), '[]'::json)::text "
         "from hwid_user_devices d join users u on u.uuid=d.user_uuid "
+        "left join lateral ("
+        "select platform, os_version, device_model, user_agent "
+        "from hwid_user_devices x "
+        "where x.hwid=d.hwid "
+        "and (nullif(x.platform, '') is not null or nullif(x.os_version, '') is not null or nullif(x.device_model, '') is not null) "
+        "order by x.updated_at desc limit 1"
+        ") src on true "
         f"where u.username='{safe}';"
     )
     try:
         return json.loads(raw or "[]")
     except Exception:
         return []
+
+
+def remnawave_delete_device(username: str, hwid: str) -> int:
+    """удаляет устройство юзера по hwid; возвращает число удалённых строк (0 или 1)."""
+    safe_user = username.replace("'", "''")
+    safe_hwid = hwid.replace("'", "''")
+    raw = remnawave_query(
+        "with deleted as ("
+        "delete from hwid_user_devices d using users u "
+        f"where u.uuid=d.user_uuid and u.username='{safe_user}' and d.hwid='{safe_hwid}' "
+        "returning 1"
+        ") select count(*) from deleted;"
+    )
+    try:
+        return int(raw or "0")
+    except ValueError:
+        return 0
 
 
 def remnawave_set_device_limit(username: str, limit: int) -> bool:
